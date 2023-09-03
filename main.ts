@@ -21,7 +21,7 @@ import { MessageEntity } from "https://deno.land/x/grammy@v1.18.1/types.ts";
 const maxUserJobs = 3;
 const maxJobs = 10;
 
-let isRunning = true;
+let pausedReason: string | null = null;
 
 const sdApiUrl = Deno.env.get("SD_API_URL");
 if (!sdApiUrl) throw new Error("SD_API_URL not set");
@@ -65,8 +65,8 @@ bot.command("txt2img", async (ctx) => {
   if (!ctx.from?.id) {
     return ctx.reply("I don't know who you are");
   }
-  if (!isRunning) {
-    return ctx.reply("I'm currently paused. Try again later.");
+  if (pausedReason != null) {
+    return ctx.reply(`I'm paused: ${pausedReason}`);
   }
   if (queue.length >= maxJobs) {
     return ctx.reply(
@@ -123,16 +123,17 @@ bot.command("queue", async (ctx) => {
 bot.command("pause", async (ctx) => {
   if (!ctx.from?.username) return;
   if (!adminUsernames.includes(ctx.from.username)) return;
-  if (!isRunning) return await ctx.reply("Already paused");
-  isRunning = false;
+  if (pausedReason != null)
+    return await ctx.reply(`Already paused: ${pausedReason}`);
+  pausedReason = ctx.match ?? "No reason given";
   return await ctx.reply("Paused");
 });
 
 bot.command("resume", async (ctx) => {
   if (!ctx.from?.username) return;
   if (!adminUsernames.includes(ctx.from.username)) return;
-  if (isRunning) return await ctx.reply("Already running");
-  isRunning = true;
+  if (pausedReason == null) return await ctx.reply("Already running");
+  pausedReason = null;
   return await ctx.reply("Resumed");
 });
 
