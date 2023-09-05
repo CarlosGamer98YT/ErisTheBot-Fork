@@ -1,6 +1,5 @@
 import { InputFile, InputMediaBuilder } from "./deps.ts";
-import { config } from "./config.ts";
-import { bot } from "./bot.ts";
+import { bot, getGlobalSession } from "./bot.ts";
 import { formatOrdinal } from "./intl.ts";
 import { SdProgressResponse, SdRequest, txt2img } from "./sd.ts";
 import { extFromMimeType, mimeTypeFromBase64 } from "./mimeType.ts";
@@ -56,12 +55,12 @@ export async function processQueue() {
           )
           .catch(() => {});
       };
+      const config = await getGlobalSession();
       const response = await txt2img(
         config.sdApiUrl,
-        { ...defaultParams, ...job.params },
+        { ...config.defaultParams, ...job.params },
         onProgress,
       );
-
       console.log(
         `Generated ${response.images.length} images (${
           response.images
@@ -69,11 +68,11 @@ export async function processQueue() {
             .join(", ")
         }) for ${job.userName} in ${job.chatName}: ${job.params.prompt?.replace(/\s+/g, " ")}`,
       );
-      bot.api.editMessageText(
+      await bot.api.editMessageText(
         job.chatId,
         progressMessage.message_id,
         `Uploading your images...`,
-      );
+      ).catch(() => {});
       const inputFiles = await Promise.all(
         response.images.map(async (imageBase64, idx) => {
           const mimeType = mimeTypeFromBase64(imageBase64);
@@ -110,14 +109,3 @@ export async function processQueue() {
     }
   }
 }
-
-const defaultParams: Partial<SdRequest> = {
-  batch_size: 1,
-  n_iter: 1,
-  width: 128 * 2,
-  height: 128 * 3,
-  steps: 20,
-  cfg_scale: 9,
-  send_images: true,
-  negative_prompt: "boring_e621_fluffyrock_v4 boring_e621_v4",
-};
