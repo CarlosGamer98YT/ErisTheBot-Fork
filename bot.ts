@@ -1,6 +1,6 @@
 import { autoQuote, bold, Bot, Context, hydrateReply, ParseModeFlavor } from "./deps.ts";
-import { fmt, formatOrdinal } from "./intl.ts";
-import { queue } from "./queue.ts";
+import { fmt } from "./intl.ts";
+import { getAllJobs, pushJob } from "./queue.ts";
 import { mySession, MySessionFlavor } from "./session.ts";
 
 export type MyContext = ParseModeFlavor<Context> & MySessionFlavor;
@@ -19,6 +19,21 @@ bot.api.config.use(async (prev, method, payload, signal) => {
     remainingAttempts -= 1;
     const retryAfterMs = (result.parameters?.retry_after ?? 30) * 1000;
     await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
+  }
+});
+
+// if error happened, try to reply to the user with the error
+bot.use(async (ctx, next) => {
+  try {
+    await next();
+  } catch (err) {
+    try {
+      await ctx.reply(`Handling update failed: ${err}`, {
+        reply_to_message_id: ctx.message?.message_id,
+      });
+    } catch {
+      throw err;
+    }
   }
 });
 
@@ -42,12 +57,13 @@ bot.command("txt2img", async (ctx) => {
   if (config.pausedReason != null) {
     return ctx.reply(`I'm paused: ${config.pausedReason || "No reason given"}`);
   }
-  if (queue.length >= config.maxJobs) {
+  const jobs = await getAllJobs();
+  if (jobs.length >= config.maxJobs) {
     return ctx.reply(
       `The queue is full. Try again later. (Max queue size: ${config.maxJobs})`,
     );
   }
-  const jobCount = queue.filter((job) => job.userId === ctx.from.id).length;
+  const jobCount = jobs.filter((job) => job.user.id === ctx.from.id).length;
   if (jobCount >= config.maxUserJobs) {
     return ctx.reply(
       `You already have ${config.maxUserJobs} jobs in queue. Try again later.`,
@@ -56,33 +72,50 @@ bot.command("txt2img", async (ctx) => {
   if (!ctx.match) {
     return ctx.reply("Please describe what you want to see after the command");
   }
-  const place = queue.length + 1;
-  const queueMessage = await ctx.reply(`You are ${formatOrdinal(place)} in queue.`);
-  const userName = [ctx.from.first_name, ctx.from.last_name].filter(Boolean).join(" ");
-  const chatName = ctx.chat.type === "supergroup" || ctx.chat.type === "group"
-    ? ctx.chat.title
-    : "private chat";
-  queue.push({
+  pushJob({
     params: { prompt: ctx.match },
-    userId: ctx.from.id,
-    userName,
-    chatId: ctx.chat.id,
-    chatName,
-    requestMessageId: ctx.message.message_id,
-    statusMessageId: queueMessage.message_id,
+    user: ctx.from,
+    chat: ctx.chat,
+    requestMessage: ctx.message,
+    status: { type: "idle" },
   });
-  console.log(`Enqueued job for ${userName} in chat ${chatName}`);
+  console.log(
+    `Enqueued job ${jobs.length + 1} for ${ctx.from.first_name} in ${ctx.chat.type} chat:`,
+    ctx.match.replace(/\s+/g, " "),
+    "\n",
+  );
 });
 
-bot.command("queue", (ctx) => {
-  if (queue.length === 0) return ctx.reply("Queue is empty");
-  return ctx.replyFmt(
-    fmt`Current queue:\n\n${
-      queue.map((job, index) =>
-        fmt`${bold(index + 1)}. ${bold(job.userName)} in ${bold(job.chatName)}\n`
+bot.command("queue", async (ctx) => {
+  let jobs = await getAllJobs();
+  const getMessageText = () => {
+    if (jobs.length === 0) return fmt`Queue is empty.`;
+    const sortedJobs = [];
+    let place = 0;
+    for (const job of jobs) {
+      if (job.status.type === "idle") place += 1;
+      sortedJobs.push({ ...job, place });
+    }
+    return fmt`Current queue:\n\n${
+      sortedJobs.map((job) =>
+        fmt`${job.place}. ${bold(job.user.first_name)} in ${job.chat.type} chat ${
+          job.status.type === "processing" ? `(${(job.status.progress * 100).toFixed(0)}%)` : ""
+        }\n`
       )
-    }`,
-  );
+    }`;
+  };
+  const message = await ctx.replyFmt(getMessageText());
+  handleFutureUpdates();
+  async function handleFutureUpdates() {
+    for (let idx = 0; idx < 12; idx++) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      jobs = await getAllJobs();
+      const formattedMessage = getMessageText();
+      await ctx.api.editMessageText(ctx.chat.id, message.message_id, formattedMessage.text, {
+        entities: formattedMessage.entities,
+      }).catch(() => undefined);
+    }
+  }
 });
 
 bot.command("pause", (ctx) => {
@@ -219,6 +252,10 @@ bot.command("sdparams", (ctx) => {
       )
     }`,
   );
+});
+
+bot.command("crash", () => {
+  throw new Error("Crash command used");
 });
 
 bot.catch((err) => {
