@@ -1,83 +1,26 @@
-import {
-  autoQuote,
-  autoRetry,
-  bold,
-  Bot,
-  Context,
-  DenoKVAdapter,
-  fmt,
-  hydrateReply,
-  ParseModeFlavor,
-  session,
-  SessionFlavor,
-} from "./deps.ts";
-import { fmtArray, formatOrdinal } from "./intl.ts";
+import { autoQuote, bold, Bot, Context, hydrateReply, ParseModeFlavor } from "./deps.ts";
+import { fmt, formatOrdinal } from "./intl.ts";
 import { queue } from "./queue.ts";
-import { SdRequest } from "./sd.ts";
+import { mySession, MySessionFlavor } from "./session.ts";
 
-type AppContext = ParseModeFlavor<Context> & SessionFlavor<SessionData>;
-
-interface SessionData {
-  global: {
-    adminUsernames: string[];
-    pausedReason: string | null;
-    sdApiUrl: string;
-    maxUserJobs: number;
-    maxJobs: number;
-    defaultParams?: Partial<SdRequest>;
-  };
-  user: {
-    steps: number;
-    detail: number;
-    batchSize: number;
-  };
-}
-
-export const bot = new Bot<AppContext>(Deno.env.get("TG_BOT_TOKEN") ?? "");
+export type MyContext = ParseModeFlavor<Context> & MySessionFlavor;
+export const bot = new Bot<MyContext>(Deno.env.get("TG_BOT_TOKEN") ?? "");
 bot.use(autoQuote);
 bot.use(hydrateReply);
-bot.api.config.use(autoRetry({ maxRetryAttempts: 5, maxDelaySeconds: 60 }));
+bot.use(mySession);
 
-const db = await Deno.openKv("./app.db");
-
-const getDefaultGlobalSession = (): SessionData["global"] => ({
-  adminUsernames: (Deno.env.get("ADMIN_USERNAMES") ?? "").split(",").filter(Boolean),
-  pausedReason: null,
-  sdApiUrl: Deno.env.get("SD_API_URL") ?? "http://127.0.0.1:7860/",
-  maxUserJobs: 3,
-  maxJobs: 20,
-  defaultParams: {
-    batch_size: 1,
-    n_iter: 1,
-    width: 128 * 2,
-    height: 128 * 3,
-    steps: 20,
-    cfg_scale: 9,
-    send_images: true,
-    negative_prompt: "boring_e621_fluffyrock_v4 boring_e621_v4",
-  },
+// Automatically retry bot requests if we get a 429 error
+bot.api.config.use(async (prev, method, payload, signal) => {
+  let remainingAttempts = 5;
+  while (true) {
+    const result = await prev(method, payload, signal);
+    if (result.ok) return result;
+    if (result.error_code !== 429 || remainingAttempts <= 0) return result;
+    remainingAttempts -= 1;
+    const retryAfterMs = (result.parameters?.retry_after ?? 30) * 1000;
+    await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
+  }
 });
-
-bot.use(session<SessionData, AppContext>({
-  type: "multi",
-  global: {
-    getSessionKey: () => "global",
-    initial: getDefaultGlobalSession,
-    storage: new DenoKVAdapter(db),
-  },
-  user: {
-    initial: () => ({
-      steps: 20,
-      detail: 8,
-      batchSize: 2,
-    }),
-  },
-}));
-
-export async function getGlobalSession(): Promise<SessionData["global"]> {
-  const entry = await db.get<SessionData["global"]>(["sessions", "global"]);
-  return entry.value ?? getDefaultGlobalSession();
-}
 
 bot.api.setMyShortDescription("I can generate furry images from text");
 bot.api.setMyDescription(
@@ -135,11 +78,8 @@ bot.command("queue", (ctx) => {
   if (queue.length === 0) return ctx.reply("Queue is empty");
   return ctx.replyFmt(
     fmt`Current queue:\n\n${
-      fmtArray(
-        queue.map((job, index) =>
-          fmt`${bold(index + 1)}. ${bold(job.userName)} in ${bold(job.chatName)}`
-        ),
-        "\n",
+      queue.map((job, index) =>
+        fmt`${bold(index + 1)}. ${bold(job.userName)} in ${bold(job.chatName)}\n`
       )
     }`,
   );
@@ -272,14 +212,13 @@ bot.command("setsdparam", (ctx) => {
 bot.command("sdparams", (ctx) => {
   if (!ctx.from?.username) return;
   const config = ctx.session.global;
-  return ctx.replyFmt(fmt`Current config:\n\n${
-    fmtArray(
+  return ctx.replyFmt(
+    fmt`Current config:\n\n${
       Object.entries(config.defaultParams ?? {}).map(([key, value]) =>
-        fmt`${bold(key)} = ${String(value)}`
-      ),
-      "\n",
-    )
-  }`);
+        fmt`${bold(key)} = ${String(value)}\n`
+      )
+    }`,
+  );
 });
 
 bot.catch((err) => {

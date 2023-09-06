@@ -8,26 +8,36 @@ export function formatOrdinal(n: number) {
   return `${n}th`;
 }
 
+type DeepArray<T> = Array<T | DeepArray<T>>;
+type StringLikes = DeepArray<FormattedString | string | number | null | undefined>;
+
 /**
- * Like `fmt` from `grammy_parse_mode` but accepts an array instead of template string.
+ * Like `fmt` from `grammy_parse_mode` but additionally accepts arrays.
  * @see https://deno.land/x/grammy_parse_mode@1.7.1/format.ts?source=#L182
  */
-export function fmtArray(
-  stringLikes: FormattedString[],
-  separator = "",
-): FormattedString {
+export const fmt = (
+  rawStringParts: TemplateStringsArray | StringLikes,
+  ...stringLikes: StringLikes
+): FormattedString => {
   let text = "";
-  const entities: ConstructorParameters<typeof FormattedString>[1] = [];
-  for (let i = 0; i < stringLikes.length; i++) {
-    const stringLike = stringLikes[i];
-    entities.push(
-      ...stringLike.entities.map((e) => ({
-        ...e,
-        offset: e.offset + text.length,
-      })),
-    );
-    text += stringLike.toString();
-    if (i < stringLikes.length - 1) text += separator;
+  const entities: ConstructorParameters<typeof FormattedString>[1][] = [];
+
+  const length = Math.max(rawStringParts.length, stringLikes.length);
+  for (let i = 0; i < length; i++) {
+    for (let stringLike of [rawStringParts[i], stringLikes[i]]) {
+      if (Array.isArray(stringLike)) {
+        stringLike = fmt(stringLike);
+      }
+      if (stringLike instanceof FormattedString) {
+        entities.push(
+          ...stringLike.entities.map((e) => ({
+            ...e,
+            offset: e.offset + text.length,
+          })),
+        );
+      }
+      if (stringLike != null) text += stringLike.toString();
+    }
   }
   return new FormattedString(text, entities);
-}
+};

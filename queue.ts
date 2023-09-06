@@ -1,5 +1,6 @@
 import { InputFile, InputMediaBuilder } from "./deps.ts";
-import { bot, getGlobalSession } from "./bot.ts";
+import { bot } from "./bot.ts";
+import { getGlobalSession } from "./session.ts";
 import { formatOrdinal } from "./intl.ts";
 import { SdProgressResponse, SdRequest, txt2img } from "./sd.ts";
 import { extFromMimeType, mimeTypeFromBase64 } from "./mimeType.ts";
