@@ -1,5 +1,5 @@
 import { Context, DenoKVAdapter, session, SessionFlavor } from "./deps.ts";
-import { SdRequest } from "./sd.ts";
+import { SdTxt2ImgRequest } from "./sd.ts";
 
 export type MySessionFlavor = SessionFlavor<SessionData>;
 
@@ -15,7 +15,7 @@ export interface GlobalData {
   sdApiUrl: string;
   maxUserJobs: number;
   maxJobs: number;
-  defaultParams?: Partial<SdRequest>;
+  defaultParams?: Partial<SdTxt2ImgRequest>;
 }
 
 export interface ChatData {

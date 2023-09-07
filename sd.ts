@@ -1,9 +1,9 @@
 export async function txt2img(
   apiUrl: string,
-  params: Partial<SdRequest>,
+  params: Partial<SdTxt2ImgRequest>,
   onProgress?: (progress: SdProgressResponse) => void,
   signal?: AbortSignal,
-): Promise<SdResponse> {
+): Promise<SdTxt2ImgResponse> {
   let response: Response | undefined;
   let error: unknown;
 
@@ -26,7 +26,7 @@ export async function txt2img(
       }
       if (response != null) {
         if (response.ok) {
-          const result = (await response.json()) as SdResponse;
+          const result = (await response.json()) as SdTxt2ImgResponse;
           return result;
         } else {
           throw new Error(`Request failed: ${response.status} ${response.statusText}`);
@@ -44,7 +44,7 @@ export async function txt2img(
   }
 }
 
-export interface SdRequest {
+export interface SdTxt2ImgRequest {
   denoising_strength: number;
   prompt: string;
   seed: number;
@@ -60,9 +60,9 @@ export interface SdRequest {
   save_images: boolean;
 }
 
-export interface SdResponse {
+export interface SdTxt2ImgResponse {
   images: string[];
-  parameters: SdRequest;
+  parameters: SdTxt2ImgRequest;
   /** Contains serialized JSON */
   info: string;
 }

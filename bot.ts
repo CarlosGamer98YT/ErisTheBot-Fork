@@ -1,7 +1,9 @@
-import { autoQuote, bold, Bot, Context, hydrateReply, ParseModeFlavor } from "./deps.ts";
+import { autoQuote, bold, Bot, Context, hydrateReply, log, ParseModeFlavor } from "./deps.ts";
 import { fmt } from "./intl.ts";
 import { getAllJobs, pushJob } from "./queue.ts";
 import { mySession, MySessionFlavor } from "./session.ts";
+
+const logger = () => log.getLogger();
 
 export type MyContext = ParseModeFlavor<Context> & MySessionFlavor;
 export const bot = new Bot<MyContext>(Deno.env.get("TG_BOT_TOKEN") ?? "");
@@ -39,7 +41,8 @@ bot.use(async (ctx, next) => {
 
 bot.api.setMyShortDescription("I can generate furry images from text");
 bot.api.setMyDescription(
-  "I can generate furry images from text. Send /txt2img to generate an image.",
+  "I can generate furry images from text. " +
+    "Send /txt2img to generate an image.",
 );
 bot.api.setMyCommands([
   { command: "txt2img", description: "Generate an image" },
@@ -72,18 +75,16 @@ bot.command("txt2img", async (ctx) => {
   if (!ctx.match) {
     return ctx.reply("Please describe what you want to see after the command");
   }
-  pushJob({
+  const statusMessage = await ctx.reply("Accepted. You are now in queue.");
+  await pushJob({
     params: { prompt: ctx.match },
     user: ctx.from,
     chat: ctx.chat,
     requestMessage: ctx.message,
+    statusMessage,
     status: { type: "idle" },
   });
-  console.log(
-    `Enqueued job ${jobs.length + 1} for ${ctx.from.first_name} in ${ctx.chat.type} chat:`,
-    ctx.match.replace(/\s+/g, " "),
-    "\n",
-  );
+  logger().info("Job enqueued", ctx.from.first_name, ctx.chat.type, ctx.match.replace(/\s+/g, " "));
 });
 
 bot.command("queue", async (ctx) => {
@@ -268,5 +269,5 @@ bot.catch((err) => {
     msg += ` in ${chat.title}`;
     if (chat.type === "supergroup" && chat.username) msg += ` (@${chat.username})`;
   }
-  console.error(msg, err.error);
+  logger().error("handling update failed", from?.first_name, chat?.type, err);
 });
