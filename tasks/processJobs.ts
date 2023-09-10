@@ -50,7 +50,11 @@ export async function processJobs(): Promise<never> {
           }
           if (
             err instanceof SdApiError &&
-            (err.statusCode === 0 /* Network error */ || err.statusCode === 404)
+            (
+              err.statusCode === 0 /* Network error */ ||
+              err.statusCode === 404 ||
+              err.statusCode === 401
+            )
           ) {
             runningWorkers.delete(worker.name);
             logger().warning(
@@ -59,7 +63,7 @@ export async function processJobs(): Promise<never> {
           }
           await job.delete().catch(() => undefined);
           if (!(err instanceof Grammy.GrammyError) || err.error_code !== 403 /* blocked bot */) {
-          await jobStore.create(job.value);
+            await jobStore.create(job.value);
           }
         })
         .finally(() => busyWorkers.delete(worker.name));
