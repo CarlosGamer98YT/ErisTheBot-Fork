@@ -1,24 +1,21 @@
+// Load environment variables from .env file
 import "https://deno.land/std@0.201.0/dotenv/load.ts";
-import { bot } from "./bot.ts";
-import { processQueue, returnHangedJobs } from "./queue.ts";
-import { log } from "./deps.ts";
 
-log.setup({
+// Setup logging
+import { Log } from "./deps.ts";
+Log.setup({
   handlers: {
-    console: new log.handlers.ConsoleHandler("INFO", {
-      formatter: (record) =>
-        `[${record.levelName}] ${record.msg} ${
-          record.args.map((arg) => JSON.stringify(arg)).join(" ")
-        } (${record.datetime.toISOString()})`,
-    }),
+    console: new Log.handlers.ConsoleHandler("DEBUG"),
   },
   loggers: {
-    default: { level: "INFO", handlers: ["console"] },
+    default: { level: "DEBUG", handlers: ["console"] },
   },
 });
 
+// Main program logic
+import { bot } from "./bot/mod.ts";
+import { runAllTasks } from "./tasks/mod.ts";
 await Promise.all([
   bot.start(),
-  processQueue(),
-  returnHangedJobs(),
+  runAllTasks(),
 ]);

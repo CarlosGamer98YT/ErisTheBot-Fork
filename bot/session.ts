@@ -1,7 +1,7 @@
-import { Context, DenoKVAdapter, session, SessionFlavor } from "./deps.ts";
-import { SdTxt2ImgRequest } from "./sd.ts";
+import { Grammy, GrammyKvStorage } from "../deps.ts";
+import { SdApi, SdTxt2ImgRequest } from "../sd.ts";
 
-export type MySessionFlavor = SessionFlavor<SessionData>;
+export type SessionFlavor = Grammy.SessionFlavor<SessionData>;
 
 export interface SessionData {
   global: GlobalData;
@@ -12,45 +12,55 @@ export interface SessionData {
 export interface GlobalData {
   adminUsernames: string[];
   pausedReason: string | null;
-  sdApiUrl: string;
   maxUserJobs: number;
   maxJobs: number;
   defaultParams?: Partial<SdTxt2ImgRequest>;
+  workers: WorkerData[];
+}
+
+export interface WorkerData {
+  name: string;
+  api: SdApi;
+  auth?: string;
+  maxResolution: number;
 }
 
 export interface ChatData {
-  language: string;
+  language?: string;
 }
 
 export interface UserData {
-  steps: number;
-  detail: number;
-  batchSize: number;
+  params?: Partial<SdTxt2ImgRequest>;
 }
 
 const globalDb = await Deno.openKv("./app.db");
 
-const globalDbAdapter = new DenoKVAdapter<GlobalData>(globalDb);
+const globalDbAdapter = new GrammyKvStorage.DenoKVAdapter<GlobalData>(globalDb);
 
 const getDefaultGlobalData = (): GlobalData => ({
-  adminUsernames: (Deno.env.get("ADMIN_USERNAMES") ?? "").split(",").filter(Boolean),
+  adminUsernames: Deno.env.get("TG_ADMIN_USERS")?.split(",") ?? [],
   pausedReason: null,
-  sdApiUrl: Deno.env.get("SD_API_URL") ?? "http://127.0.0.1:7860/",
   maxUserJobs: 3,
   maxJobs: 20,
   defaultParams: {
     batch_size: 1,
     n_iter: 1,
-    width: 128 * 2,
-    height: 128 * 3,
-    steps: 20,
-    cfg_scale: 9,
-    send_images: true,
+    width: 512,
+    height: 768,
+    steps: 30,
+    cfg_scale: 10,
     negative_prompt: "boring_e621_fluffyrock_v4 boring_e621_v4",
   },
+  workers: [
+    {
+      name: "local",
+      api: { url: Deno.env.get("SD_API_URL") ?? "http://127.0.0.1:7860/" },
+      maxResolution: 1024 * 1024,
+    },
+  ],
 });
 
-export const mySession = session<SessionData, Context & MySessionFlavor>({
+export const session = Grammy.session<SessionData, Grammy.Context & SessionFlavor>({
   type: "multi",
   global: {
     getSessionKey: () => "global",
@@ -58,17 +68,11 @@ export const mySession = session<SessionData, Context & MySessionFlavor>({
     storage: globalDbAdapter,
   },
   chat: {
-    initial: () => ({
-      language: "en",
-    }),
+    initial: () => ({}),
   },
   user: {
     getSessionKey: (ctx) => ctx.from?.id.toFixed(),
-    initial: () => ({
-      steps: 20,
-      detail: 8,
-      batchSize: 2,
-    }),
+    initial: () => ({}),
   },
 });
 
