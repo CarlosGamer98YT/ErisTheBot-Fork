@@ -58,7 +58,9 @@ export async function processJobs(): Promise<never> {
             );
           }
           await job.delete().catch(() => undefined);
+          if (!(err instanceof Grammy.GrammyError) || err.error_code !== 403 /* blocked bot */) {
           await jobStore.create(job.value);
+          }
         })
         .finally(() => busyWorkers.delete(worker.name));
     } catch (err) {
