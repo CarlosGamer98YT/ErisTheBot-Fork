@@ -29,8 +29,8 @@ You can put these in `.env` file or pass them as environment variables.
 - [x] Changing params, parsing png info in request
 - [x] Cancelling jobs by deleting message
 - [x] Multiple parallel workers
-- [ ] Replying to another text message to copy prompt and generate
-- [ ] Replying to bot message, conversation in DMs
+- [x] Replying to another text message to copy prompt and generate
+- [x] Replying to bot message, conversation in DMs
 - [ ] Replying to png message to extract png info nad generate
 - [ ] Banning tags
 - [ ] Img2Img + Upscale

@@ -4,7 +4,7 @@ import { db } from "./db.ts";
 
 export interface JobSchema {
   params: Partial<SdTxt2ImgRequest>;
-  request: GrammyTypes.Message.TextMessage & { from: GrammyTypes.User };
+  request: GrammyTypes.Message & { from: GrammyTypes.User };
   reply?: GrammyTypes.Message.TextMessage;
   status:
     | { type: "waiting" }

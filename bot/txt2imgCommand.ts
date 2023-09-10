@@ -1,39 +1,72 @@
-import { Grammy } from "../deps.ts";
+import { Grammy, GrammyStatelessQ } from "../deps.ts";
 import { formatUserChat } from "../utils.ts";
 import { jobStore } from "../db/jobStore.ts";
 import { parsePngInfo } from "../sd.ts";
 import { Context, logger } from "./mod.ts";
 
+export const txt2imgQuestion = new GrammyStatelessQ.StatelessQuestion(
+  "txt2img",
+  async (ctx) => {
+    if (!ctx.message.text) return;
+    await txt2img(ctx as any, ctx.message.text, false);
+  },
+);
+
 export async function txt2imgCommand(ctx: Grammy.CommandContext<Context>) {
-  if (!ctx.from?.id) {
-    return ctx.reply("I don't know who you are");
+  await txt2img(ctx, ctx.match, true);
+}
+
+async function txt2img(ctx: Context, match: string, includeRepliedTo: boolean): Promise<void> {
+  if (!ctx.message?.from?.id) {
+    return void ctx.reply("I don't know who you are");
   }
+
   const config = ctx.session.global;
   if (config.pausedReason != null) {
-    return ctx.reply(`I'm paused: ${config.pausedReason || "No reason given"}`);
+    return void ctx.reply(`I'm paused: ${config.pausedReason || "No reason given"}`);
   }
+
   const jobs = await jobStore.getBy("status.type", "waiting");
   if (jobs.length >= config.maxJobs) {
-    return ctx.reply(
+    return void ctx.reply(
       `The queue is full. Try again later. (Max queue size: ${config.maxJobs})`,
     );
   }
-  const userJobs = jobs.filter((job) => job.value.request.from.id === ctx.from?.id);
+
+  const userJobs = jobs.filter((job) => job.value.request.from.id === ctx.message?.from?.id);
   if (userJobs.length >= config.maxUserJobs) {
-    return ctx.reply(
+    return void ctx.reply(
       `You already have ${config.maxUserJobs} jobs in queue. Try again later.`,
     );
   }
-  const params = parsePngInfo(ctx.match);
-  if (!params.prompt) {
-    return ctx.reply("Please describe what you want to see after the command");
+
+  let params = parsePngInfo(match);
+  const repliedToMsg = ctx.message.reply_to_message;
+  const repliedToText = repliedToMsg?.text || repliedToMsg?.caption;
+  if (includeRepliedTo && repliedToText) {
+    const originalParams = parsePngInfo(repliedToText);
+    params = {
+      ...originalParams,
+      ...params,
+      prompt: [originalParams.prompt, params.prompt].filter(Boolean).join("\n"),
+    };
   }
-  const reply = await ctx.reply("Accepted. You are now in queue.");
+  if (!params.prompt) {
+    return void ctx.reply(
+      "Please tell me what you want to see." +
+        txt2imgQuestion.messageSuffixMarkdown(),
+      { reply_markup: { force_reply: true, selective: true }, parse_mode: "Markdown" },
+    );
+  }
+
+  const replyMessage = await ctx.reply("Accepted. You are now in queue.");
+
   await jobStore.create({
     params,
     request: ctx.message,
-    reply,
+    reply: replyMessage,
     status: { type: "waiting" },
   });
-  logger().debug(`Job enqueued for ${formatUserChat(ctx)}`);
+
+  logger().debug(`Job enqueued for ${formatUserChat(ctx.message)}`);
 }

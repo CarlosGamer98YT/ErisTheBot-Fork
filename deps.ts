@@ -11,6 +11,7 @@ export * as GrammyTypes from "https://deno.land/x/grammy_types@v3.2.0/mod.ts";
 export * as GrammyAutoQuote from "https://deno.land/x/grammy_autoquote@v1.1.2/mod.ts";
 export * as GrammyParseMode from "https://deno.land/x/grammy_parse_mode@1.7.1/mod.ts";
 export * as GrammyKvStorage from "https://deno.land/x/grammy_storages@v2.3.1/denokv/src/mod.ts";
+export * as GrammyStatelessQ from "npm:@grammyjs/stateless-question";
 export * as FileType from "npm:file-type@18.5.0";
 // @deno-types="./types/png-chunks-extract.d.ts"
 export * as PngChunksExtract from "npm:png-chunks-extract@1.0.0";

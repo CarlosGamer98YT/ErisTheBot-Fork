@@ -1,3 +1,4 @@
+import { db } from "../db/db.ts";
 import { Grammy, GrammyKvStorage } from "../deps.ts";
 import { SdApi, SdTxt2ImgRequest } from "../sd.ts";
 
@@ -33,9 +34,7 @@ export interface UserData {
   params?: Partial<SdTxt2ImgRequest>;
 }
 
-const globalDb = await Deno.openKv("./app.db");
-
-const globalDbAdapter = new GrammyKvStorage.DenoKVAdapter<GlobalData>(globalDb);
+const globalDbAdapter = new GrammyKvStorage.DenoKVAdapter<GlobalData>(db);
 
 const getDefaultGlobalData = (): GlobalData => ({
   adminUsernames: Deno.env.get("TG_ADMIN_USERS")?.split(",") ?? [],

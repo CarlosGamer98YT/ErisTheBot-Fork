@@ -2,7 +2,7 @@ import { Grammy, GrammyAutoQuote, GrammyParseMode, Log } from "../deps.ts";
 import { formatUserChat } from "../utils.ts";
 import { session, SessionFlavor } from "./session.ts";
 import { queueCommand } from "./queueCommand.ts";
-import { txt2imgCommand } from "./txt2imgCommand.ts";
+import { txt2imgCommand, txt2imgQuestion } from "./txt2imgCommand.ts";
 
 export const logger = () => Log.getLogger();
 
@@ -62,6 +62,7 @@ bot.api.setMyCommands([
 bot.command("start", (ctx) => ctx.reply("Hello! Use the /txt2img command to generate an image"));
 
 bot.command("txt2img", txt2imgCommand);
+bot.use(txt2imgQuestion.middleware() as any);
 
 bot.command("queue", queueCommand);
 
