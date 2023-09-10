@@ -14,9 +14,9 @@ export async function returnHangedJobs(): Promise<never> {
       const jobs = await jobStore.getBy("status.type", "processing");
       for (const job of jobs) {
         if (job.value.status.type !== "processing") continue;
-        // if job wasn't updated for 1 minute, return it to the queue
+        // if job wasn't updated for 2 minutes, return it to the queue
         const timeSinceLastUpdateMs = Date.now() - job.value.status.updatedDate.getTime();
-        if (timeSinceLastUpdateMs > 60 * 1000) {
+        if (timeSinceLastUpdateMs > 2 * 60 * 1000) {
           await job.update({ status: { type: "waiting" } });
           logger().warning(
             `Job for ${
