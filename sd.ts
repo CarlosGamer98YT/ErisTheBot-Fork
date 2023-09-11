@@ -249,15 +249,20 @@ export function parsePngInfo(pngInfo: string): Partial<SdTxt2ImgRequest> {
   const prompt: string[] = [];
   const negativePrompt: string[] = [];
   for (const tag of tags) {
-    const paramValuePair = tag.trim().match(/^(\w+\s*\w*):\s+([\d\w. ]+)\s*$/u);
+    const paramValuePair = tag.trim().match(/^(\w+\s*\w*):\s+(.*)$/u);
     if (paramValuePair) {
       const [, param, value] = paramValuePair;
       switch (param.replace(/\s+/u, "").toLowerCase()) {
+        case "positiveprompt":
+        case "positive":
         case "prompt":
+        case "pos":
           part = "prompt";
           prompt.push(value.trim());
           break;
         case "negativeprompt":
+        case "negative":
+        case "neg":
           part = "negative_prompt";
           negativePrompt.push(value.trim());
           break;
@@ -269,6 +274,7 @@ export function parsePngInfo(pngInfo: string): Partial<SdTxt2ImgRequest> {
           break;
         }
         case "cfgscale":
+        case "cfg":
         case "detail": {
           part = "params";
           const cfgScale = Number(value.trim());
@@ -288,6 +294,17 @@ export function parsePngInfo(pngInfo: string): Partial<SdTxt2ImgRequest> {
           }
           break;
         }
+        case "seed":
+        case "model":
+        case "modelhash":
+        case "modelname":
+        case "sampler":
+        case "denoisingstrength":
+        case "denoising":
+        case "denoise":
+          part = "params";
+          // ignore for now
+          break;
         default:
           break;
       }

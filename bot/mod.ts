@@ -1,8 +1,9 @@
-import { Grammy, GrammyAutoQuote, GrammyParseMode, Log } from "../deps.ts";
+import { Grammy, GrammyAutoQuote, GrammyFiles, GrammyParseMode, Log } from "../deps.ts";
 import { formatUserChat } from "../utils.ts";
 import { session, SessionFlavor } from "./session.ts";
 import { queueCommand } from "./queueCommand.ts";
 import { txt2imgCommand, txt2imgQuestion } from "./txt2imgCommand.ts";
+import { pnginfoCommand, pnginfoQuestion } from "./pnginfoCommand.ts";
 
 export const logger = () => Log.getLogger();
 
@@ -12,7 +13,9 @@ type WithRetryApi<T extends Grammy.RawApi> = {
     : T[M];
 };
 
-export type Context = GrammyParseMode.ParseModeFlavor<Grammy.Context> & SessionFlavor;
+export type Context =
+  & GrammyFiles.FileFlavor<GrammyParseMode.ParseModeFlavor<Grammy.Context>>
+  & SessionFlavor;
 export const bot = new Grammy.Bot<Context, Grammy.Api<WithRetryApi<Grammy.RawApi>>>(
   Deno.env.get("TG_BOT_TOKEN") ?? "",
 );
@@ -20,9 +23,7 @@ bot.use(GrammyAutoQuote.autoQuote);
 bot.use(GrammyParseMode.hydrateReply);
 bot.use(session);
 
-bot.catch((err) => {
-  logger().error(`Handling update from ${formatUserChat(err.ctx)} failed: ${err}`);
-});
+bot.api.config.use(GrammyFiles.hydrateFiles(bot.token));
 
 // Automatically retry bot requests if we get a "too many requests" or telegram internal error
 bot.api.config.use(async (prev, method, payload, signal) => {
@@ -44,6 +45,10 @@ bot.api.config.use(async (prev, method, payload, signal) => {
     const retryAfterMs = (result.parameters?.retry_after ?? (attempt * 5)) * 1000;
     await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
   }
+});
+
+bot.catch((err) => {
+  logger().error(`Handling update from ${formatUserChat(err.ctx)} failed: ${err}`);
 });
 
 // if error happened, try to reply to the user with the error
@@ -68,6 +73,7 @@ bot.api.setMyDescription(
 );
 bot.api.setMyCommands([
   { command: "txt2img", description: "Generate an image" },
+  { command: "pnginfo", description: "Show generation parameters of an image" },
   { command: "queue", description: "Show the current queue" },
 ]);
 
@@ -75,6 +81,9 @@ bot.command("start", (ctx) => ctx.reply("Hello! Use the /txt2img command to gene
 
 bot.command("txt2img", txt2imgCommand);
 bot.use(txt2imgQuestion.middleware());
+
+bot.command("pnginfo", pnginfoCommand);
+bot.use(pnginfoQuestion.middleware());
 
 bot.command("queue", queueCommand);
 
