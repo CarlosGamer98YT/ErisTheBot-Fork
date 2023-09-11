@@ -40,7 +40,7 @@ bot.api.config.use(async (prev, method, payload, signal) => {
       return result;
     }
     logger().warning(
-      `Retrying ${method} after attempt ${attempt} failed with ${result.error_code} error`,
+      `${method} (attempt ${attempt}) failed: ${result.error_code} ${result.description}`,
     );
     const retryAfterMs = (result.parameters?.retry_after ?? (attempt * 5)) * 1000;
     await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
@@ -48,7 +48,9 @@ bot.api.config.use(async (prev, method, payload, signal) => {
 });
 
 bot.catch((err) => {
-  logger().error(`Handling update from ${formatUserChat(err.ctx)} failed: ${err}`);
+  logger().error(
+    `Handling update from ${formatUserChat(err.ctx)} failed: ${err.name} ${err.message}`,
+  );
 });
 
 // if error happened, try to reply to the user with the error

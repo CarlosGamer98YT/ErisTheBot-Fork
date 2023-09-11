@@ -52,7 +52,7 @@ export async function sdTxt2Img(
 
   try {
     while (true) {
-      await Async.abortable(Promise.race([request, Async.delay(3000)]), signal);
+      await Async.abortable(Promise.race([request, Async.delay(4000)]), signal);
       if (await AsyncX.promiseState(request) !== "pending") return await request;
       onProgress?.(await fetchSdApi<SdProgressResponse>(api, "sdapi/v1/progress"));
     }

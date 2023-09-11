@@ -1,4 +1,14 @@
-import { Base64, FileType, FmtDuration, Grammy, GrammyParseMode, IKV, Log } from "../deps.ts";
+import {
+  Async,
+  Base64,
+  FileType,
+  FmtDuration,
+  Grammy,
+  GrammyParseMode,
+  GrammyTypes,
+  IKV,
+  Log,
+} from "../deps.ts";
 import { bot } from "../bot/mod.ts";
 import { getGlobalSession, GlobalData, WorkerData } from "../bot/session.ts";
 import { fmt, formatUserChat } from "../utils.ts";
@@ -43,7 +53,7 @@ export async function processJobs(): Promise<never> {
           if (err instanceof Grammy.GrammyError || err instanceof SdApiError) {
             await bot.api.sendMessage(
               job.value.request.chat.id,
-              `Failed to generate your prompt: ${err.message}`,
+              `Failed to generate your prompt using ${worker.name}: ${err.message}`,
               { reply_to_message_id: job.value.request.message_id },
             ).catch(() => undefined);
             await job.update({ status: { type: "waiting" } }).catch(() => undefined);
@@ -141,7 +151,6 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
       job.value.reply.chat.id,
       job.value.reply.message_id,
       `Uploading your images...`,
-      { maxAttempts: 1 },
     ).catch(() => undefined);
   }
 
@@ -168,31 +177,45 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
       : [],
   ]);
 
-  // parse files from reply JSON
-  const inputFiles = await Promise.all(
-    response.images.map(async (imageBase64, idx) => {
-      const imageBuffer = Base64.decode(imageBase64);
-      const imageType = await FileType.fileTypeFromBuffer(imageBuffer);
-      if (!imageType) throw new Error("Unknown file type returned from worker");
-      return Grammy.InputMediaBuilder.photo(
-        new Grammy.InputFile(imageBuffer, `image${idx}.${imageType.ext}`),
-        // if it can fit, add caption for first photo
-        idx === 0 && caption.text.length <= 1024
-          ? { caption: caption.text, caption_entities: caption.entities }
-          : undefined,
-      );
-    }),
-  );
+  let sendMediaAttempt = 0;
+  let resultMessages: GrammyTypes.Message.MediaMessage[] | undefined;
+  while (true) {
+    sendMediaAttempt++;
 
-  // send the result to telegram
-  const resultMessage = await bot.api.sendMediaGroup(job.value.request.chat.id, inputFiles, {
-    reply_to_message_id: job.value.request.message_id,
-    maxAttempts: 5,
-  });
+    // parse files from reply JSON
+    const inputFiles = await Promise.all(
+      response.images.map(async (imageBase64, idx) => {
+        const imageBuffer = Base64.decode(imageBase64);
+        const imageType = await FileType.fileTypeFromBuffer(imageBuffer);
+        if (!imageType) throw new Error("Unknown file type returned from worker");
+        return Grammy.InputMediaBuilder.photo(
+          new Grammy.InputFile(imageBuffer, `image${idx}.${imageType.ext}`),
+          // if it can fit, add caption for first photo
+          idx === 0 && caption.text.length <= 1024
+            ? { caption: caption.text, caption_entities: caption.entities }
+            : undefined,
+        );
+      }),
+    );
+
+    // send the result to telegram
+    try {
+      resultMessages = await bot.api.sendMediaGroup(job.value.request.chat.id, inputFiles, {
+        reply_to_message_id: job.value.request.message_id,
+        maxAttempts: 5,
+      });
+      break;
+    } catch (err) {
+      logger().warning(`Sending images (attempt ${sendMediaAttempt}) failed: ${err}`);
+      if (sendMediaAttempt >= 5) throw err;
+      await Async.delay(15000);
+    }
+  }
+
   // send caption in separate message if it couldn't fit
   if (caption.text.length > 1024 && caption.text.length <= 4096) {
     await bot.api.sendMessage(job.value.request.chat.id, caption.text, {
-      reply_to_message_id: resultMessage[0].message_id,
+      reply_to_message_id: resultMessages[0].message_id,
       entities: caption.entities,
     });
   }
@@ -210,7 +233,9 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
     status: { type: "done", info: response.info, startDate, endDate: new Date() },
   });
   logger().debug(
-    `Job finished for ${formatUserChat(job.value.request)} using ${worker.name}`,
+    `Job finished for ${formatUserChat(job.value.request)} using ${worker.name}${
+      sendMediaAttempt > 1 ? ` after ${sendMediaAttempt} attempts` : ""
+    }`,
   );
 }
 
