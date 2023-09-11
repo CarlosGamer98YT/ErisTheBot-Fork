@@ -4,11 +4,11 @@ import { jobStore } from "../db/jobStore.ts";
 import { parsePngInfo } from "../sd.ts";
 import { Context, logger } from "./mod.ts";
 
-export const txt2imgQuestion = new GrammyStatelessQ.StatelessQuestion(
+export const txt2imgQuestion = new GrammyStatelessQ.StatelessQuestion<Context>(
   "txt2img",
   async (ctx) => {
     if (!ctx.message.text) return;
-    await txt2img(ctx as any, ctx.message.text, false);
+    await txt2img(ctx, ctx.message.text, false);
   },
 );
 
@@ -48,6 +48,7 @@ async function txt2img(ctx: Context, match: string, includeRepliedTo: boolean): 
   const repliedToMsg = ctx.message.reply_to_message;
   const repliedToText = repliedToMsg?.text || repliedToMsg?.caption;
   if (includeRepliedTo && repliedToText) {
+    // TODO: remove bot command from replied to text
     const originalParams = parsePngInfo(repliedToText);
     params = {
       ...originalParams,

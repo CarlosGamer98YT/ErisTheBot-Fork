@@ -62,7 +62,7 @@ bot.api.setMyCommands([
 bot.command("start", (ctx) => ctx.reply("Hello! Use the /txt2img command to generate an image"));
 
 bot.command("txt2img", txt2imgCommand);
-bot.use(txt2imgQuestion.middleware() as any);
+bot.use(txt2imgQuestion.middleware());
 
 bot.command("queue", queueCommand);
 
