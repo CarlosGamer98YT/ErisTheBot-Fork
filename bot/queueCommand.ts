@@ -15,7 +15,6 @@ export async function queueCommand(ctx: Grammy.CommandContext<Context>) {
     const waitingJobs = await jobStore.getBy("status.type", "waiting")
       .then((jobs) => jobs.map((job, index) => ({ ...job.value, place: index + 1 })));
     const jobs = [...processingJobs, ...waitingJobs];
-    const config = ctx.session.global;
     const { bold } = GrammyParseMode;
     return fmt([
       "Current queue:\n",
@@ -40,7 +39,7 @@ export async function queueCommand(ctx: Grammy.CommandContext<Context>) {
         ])
         : ["Queue is empty.\n"],
       "\nActive workers:\n",
-      ...config.workers.flatMap((worker) => [
+      ...ctx.session.global.workers.flatMap((worker) => [
         runningWorkers.has(worker.name) ? "✅ " : "☠️ ",
         fmt`${bold(worker.name)} `,
         `(max ${(worker.maxResolution / 1000000).toFixed(1)} Mpx) `,

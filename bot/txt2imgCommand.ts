@@ -22,24 +22,23 @@ async function txt2img(ctx: Context, match: string, includeRepliedTo: boolean): 
     return;
   }
 
-  const config = ctx.session.global;
-  if (config.pausedReason != null) {
-    await ctx.reply(`I'm paused: ${config.pausedReason || "No reason given"}`);
+  if (ctx.session.global.pausedReason != null) {
+    await ctx.reply(`I'm paused: ${ctx.session.global.pausedReason || "No reason given"}`);
     return;
   }
 
   const jobs = await jobStore.getBy("status.type", "waiting");
-  if (jobs.length >= config.maxJobs) {
+  if (jobs.length >= ctx.session.global.maxJobs) {
     await ctx.reply(
-      `The queue is full. Try again later. (Max queue size: ${config.maxJobs})`,
+      `The queue is full. Try again later. (Max queue size: ${ctx.session.global.maxJobs})`,
     );
     return;
   }
 
   const userJobs = jobs.filter((job) => job.value.request.from.id === ctx.message?.from?.id);
-  if (userJobs.length >= config.maxUserJobs) {
+  if (userJobs.length >= ctx.session.global.maxUserJobs) {
     await ctx.reply(
-      `You already have ${config.maxUserJobs} jobs in queue. Try again later.`,
+      `You already have ${ctx.session.global.maxUserJobs} jobs in queue. Try again later.`,
     );
     return;
   }

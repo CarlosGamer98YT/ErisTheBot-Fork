@@ -105,7 +105,7 @@ const languageToFlagMap: Record<string, string> = {
   "lb": "🇱🇺", // Luxembourgish - Luxembourg
 };
 
-export function getFlagEmoji(countryCode?: string): string | undefined {
-  if (!countryCode) return;
-  return languageToFlagMap[countryCode];
+export function getFlagEmoji(languageCode?: string): string | undefined {
+  if (!languageCode) return;
+  return languageToFlagMap[languageCode];
 }
