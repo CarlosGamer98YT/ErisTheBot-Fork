@@ -19,6 +19,7 @@ export async function updateJobStatusMsgs(): Promise<never> {
           job.value.reply.chat.id,
           job.value.reply.message_id,
           `You are ${formatOrdinal(index + 1)} in queue.`,
+          { maxAttempts: 1 },
         ).catch(() => undefined);
       }
     } catch (err) {

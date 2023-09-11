@@ -121,6 +121,7 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
           `Generating your prompt now... ${
             (progress.progress * 100).toFixed(0)
           }% using ${worker.name}`,
+          { maxAttempts: 1 },
         ).catch(() => undefined);
       }
       await job.update({
@@ -130,7 +131,7 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
           worker: worker.name,
           updatedDate: new Date(),
         },
-      }).catch(() => undefined);
+      }, { maxAttempts: 1 }).catch(() => undefined);
     },
   );
 
@@ -140,6 +141,7 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
       job.value.reply.chat.id,
       job.value.reply.message_id,
       `Uploading your images...`,
+      { maxAttempts: 1 },
     ).catch(() => undefined);
   }
 
@@ -185,6 +187,7 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
   // send the result to telegram
   const resultMessage = await bot.api.sendMediaGroup(job.value.request.chat.id, inputFiles, {
     reply_to_message_id: job.value.request.message_id,
+    maxAttempts: 5,
   });
   // send caption in separate message if it couldn't fit
   if (caption.text.length > 1024 && caption.text.length <= 4096) {

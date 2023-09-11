@@ -6,8 +6,16 @@ import { txt2imgCommand, txt2imgQuestion } from "./txt2imgCommand.ts";
 
 export const logger = () => Log.getLogger();
 
+type WithRetryApi<T extends Grammy.RawApi> = {
+  [M in keyof T]: T[M] extends (args: infer P, ...rest: infer A) => infer R
+    ? (args: P extends object ? P & { maxAttempts?: number } : P, ...rest: A) => R
+    : T[M];
+};
+
 export type Context = GrammyParseMode.ParseModeFlavor<Grammy.Context> & SessionFlavor;
-export const bot = new Grammy.Bot<Context>(Deno.env.get("TG_BOT_TOKEN") ?? "");
+export const bot = new Grammy.Bot<Context, Grammy.Api<WithRetryApi<Grammy.RawApi>>>(
+  Deno.env.get("TG_BOT_TOKEN") ?? "",
+);
 bot.use(GrammyAutoQuote.autoQuote);
 bot.use(GrammyParseMode.hydrateReply);
 bot.use(session);
@@ -18,6 +26,7 @@ bot.catch((err) => {
 
 // Automatically retry bot requests if we get a "too many requests" or telegram internal error
 bot.api.config.use(async (prev, method, payload, signal) => {
+  const maxAttempts = payload && ("maxAttempts" in payload) ? payload.maxAttempts ?? 3 : 3;
   let attempt = 0;
   while (true) {
     attempt++;
@@ -25,10 +34,13 @@ bot.api.config.use(async (prev, method, payload, signal) => {
     if (
       result.ok ||
       ![429, 500].includes(result.error_code) ||
-      attempt >= 5
+      attempt >= maxAttempts
     ) {
       return result;
     }
+    logger().warning(
+      `Retrying ${method} after attempt ${attempt} failed with ${result.error_code} error`,
+    );
     const retryAfterMs = (result.parameters?.retry_after ?? (attempt * 5)) * 1000;
     await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
   }
