@@ -21,16 +21,14 @@ export async function queueCommand(ctx: Grammy.CommandContext<Context>) {
       ...jobs.length > 0
         ? jobs.flatMap((job) => [
           `${job.place}. `,
-          fmt`${bold(job.request.from.first_name)} `,
-          job.request.from.last_name ? fmt`${bold(job.request.from.last_name)} ` : "",
-          job.request.from.username ? `(@${job.request.from.username}) ` : "",
-          getFlagEmoji(job.request.from.language_code) ?? "",
-          job.request.chat.type === "private"
-            ? " in private chat "
-            : ` in ${job.request.chat.title} `,
-          job.request.chat.type !== "private" && job.request.chat.type !== "group" &&
-            job.request.chat.username
-            ? `(@${job.request.chat.username}) `
+          fmt`${bold(job.from.first_name)} `,
+          job.from.last_name ? fmt`${bold(job.from.last_name)} ` : "",
+          job.from.username ? `(@${job.from.username}) ` : "",
+          getFlagEmoji(job.from.language_code) ?? "",
+          job.chat.type === "private" ? " in private chat " : ` in ${job.chat.title} `,
+          job.chat.type !== "private" && job.chat.type !== "group" &&
+            job.chat.username
+            ? `(@${job.chat.username}) `
             : "",
           job.status.type === "processing"
             ? `(${(job.status.progress * 100).toFixed(0)}% using ${job.status.worker}) `

@@ -33,7 +33,8 @@ You can put these in `.env` file or pass them as environment variables.
 - [x] Replying to bot message, conversation in DMs
 - [x] Replying to png message to extract png info nad generate
 - [ ] Banning tags
-- [ ] Img2Img + Upscale
+- [x] Img2Img + Upscale
+  - [ ] special param "scale" to change image size preserving aspect ratio
 - [ ] Admin WebUI
 - [ ] User daily generation limits
 - [ ] Querying all generation history, displaying stats

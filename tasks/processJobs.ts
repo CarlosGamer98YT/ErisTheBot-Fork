@@ -12,7 +12,7 @@ import {
 import { bot } from "../bot/mod.ts";
 import { getGlobalSession, GlobalData, WorkerData } from "../bot/session.ts";
 import { fmt, formatUserChat } from "../utils.ts";
-import { SdApiError, sdTxt2Img } from "../sd.ts";
+import { SdApiError, sdImg2Img, SdProgressResponse, SdResponse, sdTxt2Img } from "../sd.ts";
 import { JobSchema, jobStore } from "../db/jobStore.ts";
 import { runningWorkers } from "./pingWorkers.ts";
 
@@ -48,13 +48,13 @@ export async function processJobs(): Promise<never> {
       processJob(job, worker, config)
         .catch(async (err) => {
           logger().error(
-            `Job failed for ${formatUserChat(job.value.request)} via ${worker.name}: ${err}`,
+            `Job failed for ${formatUserChat(job.value)} via ${worker.name}: ${err}`,
           );
           if (err instanceof Grammy.GrammyError || err instanceof SdApiError) {
             await bot.api.sendMessage(
-              job.value.request.chat.id,
+              job.value.chat.id,
               `Failed to generate your prompt using ${worker.name}: ${err.message}`,
-              { reply_to_message_id: job.value.request.message_id },
+              { reply_to_message_id: job.value.requestMessageId },
             ).catch(() => undefined);
             await job.update({ status: { type: "waiting" } }).catch(() => undefined);
           }
@@ -85,21 +85,21 @@ export async function processJobs(): Promise<never> {
 
 async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config: GlobalData) {
   logger().debug(
-    `Job started for ${formatUserChat(job.value.request)} using ${worker.name}`,
+    `Job started for ${formatUserChat(job.value)} using ${worker.name}`,
   );
   const startDate = new Date();
 
   // if there is already a status message delete it
-  if (job.value.reply) {
-    await bot.api.deleteMessage(job.value.reply.chat.id, job.value.reply.message_id)
+  if (job.value.replyMessageId) {
+    await bot.api.deleteMessage(job.value.chat.id, job.value.replyMessageId)
       .catch(() => undefined);
   }
 
   // send a new status message
   const newStatusMessage = await bot.api.sendMessage(
-    job.value.request.chat.id,
+    job.value.chat.id,
     `Generating your prompt now... 0% using ${worker.name}`,
-    { reply_to_message_id: job.value.request.message_id },
+    { reply_to_message_id: job.value.requestMessageId },
   ).catch((err) => {
     // don't error if the request message was deleted
     if (err instanceof Grammy.GrammyError && err.message.match(/repl(y|ied)/)) return null;
@@ -109,47 +109,71 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
   if (!newStatusMessage) {
     await job.delete();
     logger().info(
-      `Job cancelled for ${formatUserChat(job.value.request)}`,
+      `Job cancelled for ${formatUserChat(job.value)}`,
     );
     return;
   }
-  await job.update({ reply: newStatusMessage });
+  await job.update({ replyMessageId: newStatusMessage.message_id });
 
   // reduce size if worker can't handle the resolution
-  const size = limitSize({ ...config.defaultParams, ...job.value.params }, worker.maxResolution);
-
-  // process the job
-  const response = await sdTxt2Img(
-    worker.api,
-    { ...config.defaultParams, ...job.value.params, ...size },
-    async (progress) => {
-      // important: don't let any errors escape this callback
-      if (job.value.reply) {
-        await bot.api.editMessageText(
-          job.value.reply.chat.id,
-          job.value.reply.message_id,
-          `Generating your prompt now... ${
-            (progress.progress * 100).toFixed(0)
-          }% using ${worker.name}`,
-          { maxAttempts: 1 },
-        ).catch(() => undefined);
-      }
-      await job.update({
-        status: {
-          type: "processing",
-          progress: progress.progress,
-          worker: worker.name,
-          updatedDate: new Date(),
-        },
-      }, { maxAttempts: 1 }).catch(() => undefined);
-    },
+  const size = limitSize(
+    { ...config.defaultParams, ...job.value.task.params },
+    worker.maxResolution,
   );
 
+  // process the job
+  const handleProgress = async (progress: SdProgressResponse) => {
+    // important: don't let any errors escape this callback
+    if (job.value.replyMessageId) {
+      await bot.api.editMessageText(
+        job.value.chat.id,
+        job.value.replyMessageId,
+        `Generating your prompt now... ${
+          (progress.progress * 100).toFixed(0)
+        }% using ${worker.name}`,
+        { maxAttempts: 1 },
+      ).catch(() => undefined);
+    }
+    await job.update({
+      status: {
+        type: "processing",
+        progress: progress.progress,
+        worker: worker.name,
+        updatedDate: new Date(),
+      },
+    }, { maxAttempts: 1 }).catch(() => undefined);
+  };
+  let response: SdResponse<unknown>;
+  const taskType = job.value.task.type; // don't narrow this to never pls typescript
+  switch (job.value.task.type) {
+    case "txt2img":
+      response = await sdTxt2Img(
+        worker.api,
+        { ...config.defaultParams, ...job.value.task.params, ...size },
+        handleProgress,
+      );
+      break;
+    case "img2img": {
+      const file = await bot.api.getFile(job.value.task.fileId);
+      const fileUrl = `https://api.telegram.org/file/bot${bot.token}/${file.file_path}`;
+      const fileBuffer = await fetch(fileUrl).then((resp) => resp.arrayBuffer());
+      const fileBase64 = Base64.encode(fileBuffer);
+      response = await sdImg2Img(
+        worker.api,
+        { ...config.defaultParams, ...job.value.task.params, ...size, init_images: [fileBase64] },
+        handleProgress,
+      );
+      break;
+    }
+    default:
+      throw new Error(`Unknown task type: ${taskType}`);
+  }
+
   // upload the result
-  if (job.value.reply) {
+  if (job.value.replyMessageId) {
     await bot.api.editMessageText(
-      job.value.reply.chat.id,
-      job.value.reply.message_id,
+      job.value.chat.id,
+      job.value.replyMessageId,
       `Uploading your images...`,
     ).catch(() => undefined);
   }
@@ -200,31 +224,31 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
 
     // send the result to telegram
     try {
-      resultMessages = await bot.api.sendMediaGroup(job.value.request.chat.id, inputFiles, {
-        reply_to_message_id: job.value.request.message_id,
+      resultMessages = await bot.api.sendMediaGroup(job.value.chat.id, inputFiles, {
+        reply_to_message_id: job.value.requestMessageId,
         maxAttempts: 5,
       });
       break;
     } catch (err) {
       logger().warning(`Sending images (attempt ${sendMediaAttempt}) failed: ${err}`);
-      if (sendMediaAttempt >= 5) throw err;
-      await Async.delay(15000);
+      if (sendMediaAttempt >= 6) throw err;
+      await Async.delay(10000);
     }
   }
 
   // send caption in separate message if it couldn't fit
   if (caption.text.length > 1024 && caption.text.length <= 4096) {
-    await bot.api.sendMessage(job.value.request.chat.id, caption.text, {
+    await bot.api.sendMessage(job.value.chat.id, caption.text, {
       reply_to_message_id: resultMessages[0].message_id,
       entities: caption.entities,
     });
   }
 
   // delete the status message
-  if (job.value.reply) {
-    await bot.api.deleteMessage(job.value.reply.chat.id, job.value.reply.message_id)
+  if (job.value.replyMessageId) {
+    await bot.api.deleteMessage(job.value.chat.id, job.value.replyMessageId)
       .catch(() => undefined)
-      .then(() => job.update({ reply: undefined }))
+      .then(() => job.update({ replyMessageId: undefined }))
       .catch(() => undefined);
   }
 
@@ -233,7 +257,7 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
     status: { type: "done", info: response.info, startDate, endDate: new Date() },
   });
   logger().debug(
-    `Job finished for ${formatUserChat(job.value.request)} using ${worker.name}${
+    `Job finished for ${formatUserChat(job.value)} using ${worker.name}${
       sendMediaAttempt > 1 ? ` after ${sendMediaAttempt} attempts` : ""
     }`,
   );

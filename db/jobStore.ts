@@ -1,11 +1,15 @@
 import { GrammyTypes, IKV } from "../deps.ts";
-import { SdTxt2ImgInfo, SdTxt2ImgRequest } from "../sd.ts";
+import { PngInfo, SdTxt2ImgInfo } from "../sd.ts";
 import { db } from "./db.ts";
 
 export interface JobSchema {
-  params: Partial<SdTxt2ImgRequest>;
-  request: GrammyTypes.Message & { from: GrammyTypes.User };
-  reply?: GrammyTypes.Message.TextMessage;
+  task:
+    | { type: "txt2img"; params: Partial<PngInfo> }
+    | { type: "img2img"; params: Partial<PngInfo>; fileId: string };
+  from: GrammyTypes.User;
+  chat: GrammyTypes.Chat;
+  requestMessageId: number;
+  replyMessageId?: number;
   status:
     | { type: "waiting" }
     | { type: "processing"; progress: number; worker: string; updatedDate: Date }

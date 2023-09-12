@@ -1,22 +1,27 @@
-import { Grammy, GrammyStatelessQ } from "../deps.ts";
+import { Collections, Grammy, GrammyStatelessQ } from "../deps.ts";
 import { formatUserChat } from "../utils.ts";
 import { jobStore } from "../db/jobStore.ts";
-import { getPngInfo, parsePngInfo, PngInfo } from "../sd.ts";
+import { parsePngInfo, PngInfo } from "../sd.ts";
 import { Context, logger } from "./mod.ts";
 
-export const txt2imgQuestion = new GrammyStatelessQ.StatelessQuestion<Context>(
-  "txt2img",
-  async (ctx) => {
-    if (!ctx.message.text) return;
-    await txt2img(ctx, ctx.message.text, false);
+export const img2imgQuestion = new GrammyStatelessQ.StatelessQuestion<Context>(
+  "img2img",
+  async (ctx, state) => {
+    // todo: also save original image size in state
+    await img2img(ctx, ctx.message.text, false, state);
   },
 );
 
-export async function txt2imgCommand(ctx: Grammy.CommandContext<Context>) {
-  await txt2img(ctx, ctx.match, true);
+export async function img2imgCommand(ctx: Grammy.CommandContext<Context>) {
+  await img2img(ctx, ctx.match, true);
 }
 
-async function txt2img(ctx: Context, match: string, includeRepliedTo: boolean): Promise<void> {
+async function img2img(
+  ctx: Context,
+  match: string | undefined,
+  includeRepliedTo: boolean,
+  fileId?: string,
+): Promise<void> {
   if (!ctx.message?.from?.id) {
     await ctx.reply("I don't know who you are");
     return;
@@ -47,17 +52,22 @@ async function txt2img(ctx: Context, match: string, includeRepliedTo: boolean): 
 
   const repliedToMsg = ctx.message.reply_to_message;
 
-  if (includeRepliedTo && repliedToMsg?.document?.mime_type === "image/png") {
-    const file = await ctx.api.getFile(repliedToMsg.document.file_id);
-    const buffer = await fetch(file.getUrl()).then((resp) => resp.arrayBuffer());
-    const fileParams = parsePngInfo(getPngInfo(new Uint8Array(buffer)) ?? "");
-    params = {
-      ...params,
-      ...fileParams,
-      prompt: [params.prompt, fileParams.prompt].filter(Boolean).join("\n"),
-      negative_prompt: [params.negative_prompt, fileParams.negative_prompt]
-        .filter(Boolean).join("\n"),
-    };
+  if (includeRepliedTo && repliedToMsg?.photo) {
+    const photos = repliedToMsg.photo;
+    const biggestPhoto = Collections.maxBy(photos, (p) => p.width * p.height);
+    if (!biggestPhoto) throw new Error("Message was a photo but had no photos?");
+    fileId = biggestPhoto.file_id;
+    params.width = biggestPhoto.width;
+    params.height = biggestPhoto.height;
+  }
+
+  if (ctx.message.photo) {
+    const photos = ctx.message.photo;
+    const biggestPhoto = Collections.maxBy(photos, (p) => p.width * p.height);
+    if (!biggestPhoto) throw new Error("Message was a photo but had no photos?");
+    fileId = biggestPhoto.file_id;
+    params.width = biggestPhoto.width;
+    params.height = biggestPhoto.height;
   }
 
   const repliedToText = repliedToMsg?.text || repliedToMsg?.caption;
@@ -73,17 +83,26 @@ async function txt2img(ctx: Context, match: string, includeRepliedTo: boolean): 
     };
   }
 
-  const messageParams = parsePngInfo(match);
+  const messageParams = parsePngInfo(match ?? "");
   params = {
     ...params,
     ...messageParams,
     prompt: [params.prompt, messageParams.prompt].filter(Boolean).join("\n"),
   };
 
+  if (!fileId) {
+    await ctx.reply(
+      "Please show me a picture to repaint." +
+        img2imgQuestion.messageSuffixMarkdown(),
+      { reply_markup: { force_reply: true, selective: true }, parse_mode: "Markdown" },
+    );
+    return;
+  }
+
   if (!params.prompt) {
     await ctx.reply(
-      "Please tell me what you want to see." +
-        txt2imgQuestion.messageSuffixMarkdown(),
+      "Please describe the picture you want to repaint." +
+        img2imgQuestion.messageSuffixMarkdown(fileId),
       { reply_markup: { force_reply: true, selective: true }, parse_mode: "Markdown" },
     );
     return;
@@ -92,7 +111,7 @@ async function txt2img(ctx: Context, match: string, includeRepliedTo: boolean): 
   const replyMessage = await ctx.reply("Accepted. You are now in queue.");
 
   await jobStore.create({
-    task: { type: "txt2img", params },
+    task: { type: "img2img", params, fileId },
     from: ctx.message.from,
     chat: ctx.message.chat,
     requestMessageId: ctx.message.message_id,

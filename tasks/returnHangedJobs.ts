@@ -19,9 +19,7 @@ export async function returnHangedJobs(): Promise<never> {
         if (timeSinceLastUpdateMs > 2 * 60 * 1000) {
           await job.update({ status: { type: "waiting" } });
           logger().warning(
-            `Job for ${
-              formatUserChat(job.value.request)
-            } was returned to the queue because it hanged for ${
+            `Job for ${formatUserChat(job.value)} was returned to the queue because it hanged for ${
               FmtDuration.format(Math.trunc(timeSinceLastUpdateMs / 1000) * 1000, {
                 ignoreZero: true,
               })

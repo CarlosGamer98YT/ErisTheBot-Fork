@@ -37,13 +37,50 @@ async function fetchSdApi<T>(api: SdApi, endpoint: string, body?: unknown): Prom
   return result;
 }
 
+interface SdRequest {
+  prompt: string;
+  denoising_strength: number;
+  styles: string[];
+  negative_prompt: string;
+  seed: number;
+  subseed: number;
+  subseed_strength: number;
+  seed_resize_from_h: number;
+  seed_resize_from_w: number;
+  width: number;
+  height: number;
+  sampler_name: string;
+  batch_size: number;
+  n_iter: number;
+  steps: number;
+  cfg_scale: number;
+  restore_faces: boolean;
+  tiling: boolean;
+  do_not_save_samples: boolean;
+  do_not_save_grid: boolean;
+  eta: number;
+  s_min_uncond: number;
+  s_churn: number;
+  s_tmax: number;
+  s_tmin: number;
+  s_noise: number;
+  override_settings: object;
+  override_settings_restore_afterwards: boolean;
+  script_args: unknown[];
+  sampler_index: string;
+  script_name: string;
+  send_images: boolean;
+  save_images: boolean;
+  alwayson_scripts: object;
+}
+
 export async function sdTxt2Img(
   api: SdApi,
   params: Partial<SdTxt2ImgRequest>,
   onProgress?: (progress: SdProgressResponse) => void,
   signal: AbortSignal = neverSignal,
-): Promise<SdTxt2ImgResponse> {
-  const request = fetchSdApi<SdTxt2ImgResponse>(api, "sdapi/v1/txt2img", params)
+): Promise<SdResponse<SdTxt2ImgRequest>> {
+  const request = fetchSdApi<SdResponse<SdTxt2ImgRequest>>(api, "sdapi/v1/txt2img", params)
     // JSON field "info" is a JSON-serialized string so we need to parse this part second time
     .then((data) => ({
       ...data,
@@ -63,57 +100,65 @@ export async function sdTxt2Img(
   }
 }
 
-export interface SdTxt2ImgRequest {
+export interface SdTxt2ImgRequest extends SdRequest {
   enable_hr: boolean;
-  denoising_strength: number;
-  firstphase_width: number;
   firstphase_height: number;
-  hr_scale: number;
-  hr_upscaler: unknown;
-  hr_second_pass_steps: number;
+  firstphase_width: number;
   hr_resize_x: number;
-  hr_resize_y: number;
-  hr_sampler_name: unknown;
-  hr_prompt: string;
   hr_negative_prompt: string;
-  prompt: string;
-  styles: unknown;
-  seed: number;
-  subseed: number;
-  subseed_strength: number;
-  seed_resize_from_h: number;
-  seed_resize_from_w: number;
-  sampler_name: unknown;
-  batch_size: number;
-  n_iter: number;
-  steps: number;
-  cfg_scale: number;
-  width: number;
-  height: number;
-  restore_faces: boolean;
-  tiling: boolean;
-  do_not_save_samples: boolean;
-  do_not_save_grid: boolean;
-  negative_prompt: string;
-  eta: unknown;
-  s_min_uncond: number;
-  s_churn: number;
-  s_tmax: unknown;
-  s_tmin: number;
-  s_noise: number;
-  override_settings: object;
-  override_settings_restore_afterwards: boolean;
-  script_args: unknown[];
-  sampler_index: string;
-  script_name: unknown;
-  send_images: boolean;
-  save_images: boolean;
-  alwayson_scripts: object;
+  hr_prompt: string;
+  hr_resize_y: number;
+  hr_sampler_name: string;
+  hr_scale: number;
+  hr_second_pass_steps: number;
+  hr_upscaler: string;
 }
 
-export interface SdTxt2ImgResponse {
+export async function sdImg2Img(
+  api: SdApi,
+  params: Partial<SdImg2ImgRequest>,
+  onProgress?: (progress: SdProgressResponse) => void,
+  signal: AbortSignal = neverSignal,
+): Promise<SdResponse<SdImg2ImgRequest>> {
+  const request = fetchSdApi<SdResponse<SdImg2ImgRequest>>(api, "sdapi/v1/img2img", params)
+    // JSON field "info" is a JSON-serialized string so we need to parse this part second time
+    .then((data) => ({
+      ...data,
+      info: typeof data.info === "string" ? JSON.parse(data.info) : data.info,
+    }));
+
+  try {
+    while (true) {
+      await Async.abortable(Promise.race([request, Async.delay(4000)]), signal);
+      if (await AsyncX.promiseState(request) !== "pending") return await request;
+      onProgress?.(await fetchSdApi<SdProgressResponse>(api, "sdapi/v1/progress"));
+    }
+  } finally {
+    if (await AsyncX.promiseState(request) === "pending") {
+      await fetchSdApi(api, "sdapi/v1/interrupt", {});
+    }
+  }
+}
+
+export interface SdImg2ImgRequest extends SdRequest {
+  image_cfg_scale: number;
+  include_init_images: boolean;
+  init_images: string[];
+  initial_noise_multiplier: number;
+  inpaint_full_res: boolean;
+  inpaint_full_res_padding: number;
+  inpainting_fill: number;
+  inpainting_mask_invert: number;
+  mask: string;
+  mask_blur: number;
+  mask_blur_x: number;
+  mask_blur_y: number;
+  resize_mode: number;
+}
+
+export interface SdResponse<T> {
   images: string[];
-  parameters: SdTxt2ImgRequest;
+  parameters: T;
   // Warning: raw response from API is a JSON-serialized string
   info: SdTxt2ImgInfo;
 }
@@ -242,10 +287,22 @@ export function getPngInfo(pngData: Uint8Array): string | undefined {
     ?.text;
 }
 
-export function parsePngInfo(pngInfo: string): Partial<SdTxt2ImgRequest> {
+export interface PngInfo {
+  prompt: string;
+  negative_prompt: string;
+  steps: number;
+  cfg_scale: number;
+  width: number;
+  height: number;
+  sampler_name: string;
+  seed: number;
+  denoising_strength: number;
+}
+
+export function parsePngInfo(pngInfo: string): Partial<PngInfo> {
   const tags = pngInfo.split(/[,;]+|\.+\s|\n/u);
   let part: "prompt" | "negative_prompt" | "params" = "prompt";
-  const params: Partial<SdTxt2ImgRequest> = {};
+  const params: Partial<PngInfo> = {};
   const prompt: string[] = [];
   const negativePrompt: string[] = [];
   for (const tag of tags) {
@@ -294,14 +351,26 @@ export function parsePngInfo(pngInfo: string): Partial<SdTxt2ImgRequest> {
           }
           break;
         }
+        case "denoisingstrength":
+        case "denoising":
+        case "denoise": {
+          part = "params";
+          // allow percent or decimal
+          let denoisingStrength: number;
+          if (value.trim().endsWith("%")) {
+            denoisingStrength = Number(value.trim().slice(0, -1).trim()) / 100;
+          } else {
+            denoisingStrength = Number(value.trim());
+          }
+          denoisingStrength = Math.min(Math.max(denoisingStrength, 0), 1);
+          params.denoising_strength = denoisingStrength;
+          break;
+        }
         case "seed":
         case "model":
         case "modelhash":
         case "modelname":
         case "sampler":
-        case "denoisingstrength":
-        case "denoising":
-        case "denoise":
           part = "params";
           // ignore for now
           break;
