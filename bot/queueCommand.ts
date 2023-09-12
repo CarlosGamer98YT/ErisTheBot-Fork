@@ -16,6 +16,7 @@ export async function queueCommand(ctx: Grammy.CommandContext<Context>) {
       .then((jobs) => jobs.map((job, index) => ({ ...job.value, place: index + 1 })));
     const jobs = [...processingJobs, ...waitingJobs];
     const { bold } = GrammyParseMode;
+
     return fmt([
       "Current queue:\n",
       ...jobs.length > 0
@@ -47,8 +48,9 @@ export async function queueCommand(ctx: Grammy.CommandContext<Context>) {
   }
 
   async function handleFutureUpdates() {
-    for (let idx = 0; idx < 20; idx++) {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+    for (let idx = 0; idx < 30; idx++) {
+      await ctx.api.sendChatAction(ctx.chat.id, "typing");
+      await new Promise((resolve) => setTimeout(resolve, 4000));
       const nextFormattedMessage = await getMessageText();
       if (nextFormattedMessage.text !== formattedMessage.text) {
         await ctx.api.editMessageText(

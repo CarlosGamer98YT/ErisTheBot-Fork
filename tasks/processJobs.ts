@@ -113,6 +113,8 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
 
   // we have to check if job is still processing at every step because TypeScript
   if (job.value.status.type === "processing") {
+    await bot.api.sendChatAction(job.value.chat.id, "upload_photo", { maxAttempts: 1 })
+      .catch(() => undefined);
     // if now there is no status message
     if (!job.value.status.message) {
       // send a new status message
@@ -160,25 +162,28 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
   // process the job
   const handleProgress = async (progress: SdProgressResponse) => {
     if (job.value.status.type === "processing" && job.value.status.message) {
-      await bot.api.editMessageText(
-        job.value.status.message.chat.id,
-        job.value.status.message.message_id,
-        `Generating your prompt now... ${
-          (progress.progress * 100).toFixed(0)
-        }% using ${worker.name}`,
-        { maxAttempts: 1 },
-      ).catch(() => undefined);
+      await Promise.all([
+        bot.api.sendChatAction(job.value.chat.id, "upload_photo", { maxAttempts: 1 }),
+        bot.api.editMessageText(
+          job.value.status.message.chat.id,
+          job.value.status.message.message_id,
+          `Generating your prompt now... ${
+            (progress.progress * 100).toFixed(0)
+          }% using ${worker.name}`,
+          { maxAttempts: 1 },
+        ),
+        job.update((value) => ({
+          ...value,
+          status: {
+            type: "processing",
+            progress: progress.progress,
+            worker: worker.name,
+            updatedDate: new Date(),
+            message: value.status.type !== "done" ? value.status.message : undefined,
+          },
+        }), { maxAttempts: 1 }),
+      ]).catch(() => undefined);
     }
-    await job.update((value) => ({
-      ...value,
-      status: {
-        type: "processing",
-        progress: progress.progress,
-        worker: worker.name,
-        updatedDate: new Date(),
-        message: value.status.type !== "done" ? value.status.message : undefined,
-      },
-    }), { maxAttempts: 1 }).catch(() => undefined);
   };
   let response: SdResponse<unknown>;
   const taskType = job.value.task.type; // don't narrow this to never pls typescript
@@ -243,6 +248,8 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
   let resultMessages: GrammyTypes.Message.MediaMessage[] | undefined;
   while (true) {
     sendMediaAttempt++;
+    await bot.api.sendChatAction(job.value.chat.id, "upload_photo", { maxAttempts: 1 })
+      .catch(() => undefined);
 
     // parse files from reply JSON
     const inputFiles = await Promise.all(
@@ -270,7 +277,12 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
     } catch (err) {
       logger().warning(`Sending images (attempt ${sendMediaAttempt}) failed: ${err}`);
       if (sendMediaAttempt >= 6) throw err;
-      await Async.delay(10000);
+      // wait 2 * 5 seconds before retrying
+      for (let i = 0; i < 2; i++) {
+        await bot.api.sendChatAction(job.value.chat.id, "upload_photo", { maxAttempts: 1 })
+          .catch(() => undefined);
+        await Async.delay(5000);
+      }
     }
   }
 
