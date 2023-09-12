@@ -31,7 +31,7 @@ You can put these in `.env` file or pass them as environment variables.
 - [x] Multiple parallel workers
 - [x] Replying to another text message to copy prompt and generate
 - [x] Replying to bot message, conversation in DMs
-- [ ] Replying to png message to extract png info nad generate
+- [x] Replying to png message to extract png info nad generate
 - [ ] Banning tags
 - [ ] Img2Img + Upscale
 - [ ] Admin WebUI
