@@ -14,10 +14,10 @@ export async function updateJobStatusMsgs(): Promise<never> {
       await new Promise((resolve) => setTimeout(resolve, 5000));
       const jobs = await jobStore.getBy("status.type", "waiting");
       for (const [index, job] of jobs.entries()) {
-        if (!job.value.replyMessageId) continue;
+        if (job.value.status.type !== "waiting" || !job.value.status.message) continue;
         await bot.api.editMessageText(
-          job.value.chat.id,
-          job.value.replyMessageId,
+          job.value.status.message.chat.id,
+          job.value.status.message.message_id,
           `You are ${formatOrdinal(index + 1)} in queue.`,
           { maxAttempts: 1 },
         ).catch(() => undefined);

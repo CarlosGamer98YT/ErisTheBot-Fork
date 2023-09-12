@@ -40,10 +40,16 @@ export async function processJobs(): Promise<never> {
       if (!worker) continue;
 
       // process the job
-      await job.update({
-        status: { type: "processing", progress: 0, worker: worker.name, updatedDate: new Date() },
-      });
-
+      await job.update((value) => ({
+        ...value,
+        status: {
+          type: "processing",
+          progress: 0,
+          worker: worker.name,
+          updatedDate: new Date(),
+          message: job.value.status.type !== "done" ? job.value.status.message : undefined,
+        },
+      }));
       busyWorkers.add(worker.name);
       processJob(job, worker, config)
         .catch(async (err) => {
@@ -89,31 +95,61 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
   );
   const startDate = new Date();
 
-  // if there is already a status message delete it
-  if (job.value.replyMessageId) {
-    await bot.api.deleteMessage(job.value.chat.id, job.value.replyMessageId)
-      .catch(() => undefined);
+  // if there is already a status message and its older than 10 seconds
+  if (
+    job.value.status.type === "processing" && job.value.status.message &&
+    (Date.now() - job.value.status.message.date * 1000) > 10 * 1000
+  ) {
+    // delete it
+    await bot.api.deleteMessage(
+      job.value.status.message.chat.id,
+      job.value.status.message.message_id,
+    ).catch(() => undefined);
+    await job.update((value) => ({
+      ...value,
+      status: { ...value.status, message: undefined },
+    }));
   }
 
-  // send a new status message
-  const newStatusMessage = await bot.api.sendMessage(
-    job.value.chat.id,
-    `Generating your prompt now... 0% using ${worker.name}`,
-    { reply_to_message_id: job.value.requestMessageId },
-  ).catch((err) => {
-    // don't error if the request message was deleted
-    if (err instanceof Grammy.GrammyError && err.message.match(/repl(y|ied)/)) return null;
-    else throw err;
-  });
-  // if the request message was deleted, cancel the job
-  if (!newStatusMessage) {
+  // we have to check if job is still processing at every step because TypeScript
+  if (job.value.status.type === "processing") {
+    // if now there is no status message
+    if (!job.value.status.message) {
+      // send a new status message
+      const statusMessage = await bot.api.sendMessage(
+        job.value.chat.id,
+        `Generating your prompt now... 0% using ${worker.name}`,
+        { reply_to_message_id: job.value.requestMessageId },
+      ).catch((err) => {
+        // if the request message (the message we are replying to) was deleted
+        if (err instanceof Grammy.GrammyError && err.message.match(/repl(y|ied)/)) {
+          // jest set the status message to undefined
+          return undefined;
+        }
+        throw err;
+      });
+      await job.update((value) => ({
+        ...value,
+        status: { ...value.status, message: statusMessage },
+      }));
+    } else {
+      // edit the existing status message
+      await bot.api.editMessageText(
+        job.value.status.message.chat.id,
+        job.value.status.message.message_id,
+        `Generating your prompt now... 0% using ${worker.name}`,
+        { maxAttempts: 1 },
+      ).catch(() => undefined);
+    }
+  }
+
+  // if we don't have a status message (it failed sending because request was deleted)
+  if (job.value.status.type === "processing" && !job.value.status.message) {
+    // cancel the job
     await job.delete();
-    logger().info(
-      `Job cancelled for ${formatUserChat(job.value)}`,
-    );
+    logger().info(`Job cancelled for ${formatUserChat(job.value)}`);
     return;
   }
-  await job.update({ replyMessageId: newStatusMessage.message_id });
 
   // reduce size if worker can't handle the resolution
   const size = limitSize(
@@ -123,25 +159,26 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
 
   // process the job
   const handleProgress = async (progress: SdProgressResponse) => {
-    // important: don't let any errors escape this callback
-    if (job.value.replyMessageId) {
+    if (job.value.status.type === "processing" && job.value.status.message) {
       await bot.api.editMessageText(
-        job.value.chat.id,
-        job.value.replyMessageId,
+        job.value.status.message.chat.id,
+        job.value.status.message.message_id,
         `Generating your prompt now... ${
           (progress.progress * 100).toFixed(0)
         }% using ${worker.name}`,
         { maxAttempts: 1 },
       ).catch(() => undefined);
     }
-    await job.update({
+    await job.update((value) => ({
+      ...value,
       status: {
         type: "processing",
         progress: progress.progress,
         worker: worker.name,
         updatedDate: new Date(),
+        message: value.status.type !== "done" ? value.status.message : undefined,
       },
-    }, { maxAttempts: 1 }).catch(() => undefined);
+    }), { maxAttempts: 1 }).catch(() => undefined);
   };
   let response: SdResponse<unknown>;
   const taskType = job.value.task.type; // don't narrow this to never pls typescript
@@ -169,11 +206,11 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
       throw new Error(`Unknown task type: ${taskType}`);
   }
 
-  // upload the result
-  if (job.value.replyMessageId) {
+  // change status message to uploading images
+  if (job.value.status.type === "processing" && job.value.status.message) {
     await bot.api.editMessageText(
-      job.value.chat.id,
-      job.value.replyMessageId,
+      job.value.status.message.chat.id,
+      job.value.status.message.message_id,
       `Uploading your images...`,
     ).catch(() => undefined);
   }
@@ -201,6 +238,7 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
       : [],
   ]);
 
+  // sending images loop because telegram is unreliable and it would be a shame to lose the images
   let sendMediaAttempt = 0;
   let resultMessages: GrammyTypes.Message.MediaMessage[] | undefined;
   while (true) {
@@ -245,17 +283,23 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
   }
 
   // delete the status message
-  if (job.value.replyMessageId) {
-    await bot.api.deleteMessage(job.value.chat.id, job.value.replyMessageId)
-      .catch(() => undefined)
-      .then(() => job.update({ replyMessageId: undefined }))
-      .catch(() => undefined);
+  if (job.value.status.type === "processing" && job.value.status.message) {
+    await bot.api.deleteMessage(
+      job.value.status.message.chat.id,
+      job.value.status.message.message_id,
+    ).catch(() => undefined);
+    await job.update((value) => ({
+      ...value,
+      status: { ...value.status, message: undefined },
+    }));
   }
 
   // update job to status done
-  await job.update({
+  await job.update((value) => ({
+    ...value,
     status: { type: "done", info: response.info, startDate, endDate: new Date() },
-  });
+  }));
+
   logger().debug(
     `Job finished for ${formatUserChat(job.value)} using ${worker.name}${
       sendMediaAttempt > 1 ? ` after ${sendMediaAttempt} attempts` : ""

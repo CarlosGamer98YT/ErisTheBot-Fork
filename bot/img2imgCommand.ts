@@ -115,8 +115,7 @@ async function img2img(
     from: ctx.message.from,
     chat: ctx.message.chat,
     requestMessageId: ctx.message.message_id,
-    replyMessageId: replyMessage.message_id,
-    status: { type: "waiting" },
+    status: { type: "waiting", message: replyMessage },
   });
 
   logger().debug(`Job enqueued for ${formatUserChat(ctx.message)}`);
