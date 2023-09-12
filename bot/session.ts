@@ -20,9 +20,9 @@ export interface GlobalData {
 }
 
 export interface WorkerData {
-  name: string;
+  id: string;
+  name?: string;
   api: SdApi;
-  auth?: string;
   maxResolution: number;
 }
 
@@ -52,7 +52,7 @@ const getDefaultGlobalData = (): GlobalData => ({
   },
   workers: [
     {
-      name: "local",
+      id: "local",
       api: { url: Deno.env.get("SD_API_URL") ?? "http://127.0.0.1:7860/" },
       maxResolution: 1024 * 1024,
     },

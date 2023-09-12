@@ -15,13 +15,13 @@ export async function pingWorkers(): Promise<never> {
       const config = await getGlobalSession();
       for (const worker of config.workers) {
         const status = await sdGetConfig(worker.api).catch(() => null);
-        const wasRunning = runningWorkers.has(worker.name);
+        const wasRunning = runningWorkers.has(worker.id);
         if (status) {
-          runningWorkers.add(worker.name);
-          if (!wasRunning) logger().info(`Worker ${worker.name} is online`);
+          runningWorkers.add(worker.id);
+          if (!wasRunning) logger().info(`Worker ${worker.id} is online`);
         } else {
-          runningWorkers.delete(worker.name);
-          if (wasRunning) logger().warning(`Worker ${worker.name} went offline`);
+          runningWorkers.delete(worker.id);
+          if (wasRunning) logger().warning(`Worker ${worker.id} went offline`);
         }
       }
       await Async.delay(60 * 1000);

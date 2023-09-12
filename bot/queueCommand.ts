@@ -39,8 +39,8 @@ export async function queueCommand(ctx: Grammy.CommandContext<Context>) {
         : ["Queue is empty.\n"],
       "\nActive workers:\n",
       ...ctx.session.global.workers.flatMap((worker) => [
-        runningWorkers.has(worker.name) ? "✅ " : "☠️ ",
-        fmt`${bold(worker.name)} `,
+        runningWorkers.has(worker.id) ? "✅ " : "☠️ ",
+        fmt`${bold(worker.name || worker.id)} `,
         `(max ${(worker.maxResolution / 1000000).toFixed(1)} Mpx) `,
         "\n",
       ]),

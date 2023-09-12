@@ -34,8 +34,8 @@ export async function processJobs(): Promise<never> {
       // find a worker to handle the job
       const config = await getGlobalSession();
       const worker = config.workers?.find((worker) =>
-        runningWorkers.has(worker.name) &&
-        !busyWorkers.has(worker.name)
+        runningWorkers.has(worker.id) &&
+        !busyWorkers.has(worker.id)
       );
       if (!worker) continue;
 
@@ -45,16 +45,16 @@ export async function processJobs(): Promise<never> {
         status: {
           type: "processing",
           progress: 0,
-          worker: worker.name,
+          worker: worker.id,
           updatedDate: new Date(),
           message: job.value.status.type !== "done" ? job.value.status.message : undefined,
         },
       }));
-      busyWorkers.add(worker.name);
+      busyWorkers.add(worker.id);
       processJob(job, worker, config)
         .catch(async (err) => {
           logger().error(
-            `Job failed for ${formatUserChat(job.value)} via ${worker.name}: ${err}`,
+            `Job failed for ${formatUserChat(job.value)} via ${worker.id}: ${err}`,
           );
           if (err instanceof Grammy.GrammyError || err instanceof SdApiError) {
             await bot.api.sendMessage(
@@ -72,9 +72,9 @@ export async function processJobs(): Promise<never> {
               err.statusCode === 401
             )
           ) {
-            runningWorkers.delete(worker.name);
+            runningWorkers.delete(worker.id);
             logger().warning(
-              `Worker ${worker.name} was marked as offline because of network error`,
+              `Worker ${worker.id} was marked as offline because of network error`,
             );
           }
           await job.delete().catch(() => undefined);
@@ -82,7 +82,7 @@ export async function processJobs(): Promise<never> {
             await jobStore.create(job.value);
           }
         })
-        .finally(() => busyWorkers.delete(worker.name));
+        .finally(() => busyWorkers.delete(worker.id));
     } catch (err) {
       logger().warning(`Processing jobs failed: ${err}`);
     }
@@ -91,7 +91,7 @@ export async function processJobs(): Promise<never> {
 
 async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config: GlobalData) {
   logger().debug(
-    `Job started for ${formatUserChat(job.value)} using ${worker.name}`,
+    `Job started for ${formatUserChat(job.value)} using ${worker.id}`,
   );
   const startDate = new Date();
 
@@ -177,7 +177,7 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
           status: {
             type: "processing",
             progress: progress.progress,
-            worker: worker.name,
+            worker: worker.id,
             updatedDate: new Date(),
             message: value.status.type !== "done" ? value.status.message : undefined,
           },
@@ -237,7 +237,7 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
         fmt`${bold("CFG scale:")} ${response.info.cfg_scale}, `,
         fmt`${bold("Seed:")} ${response.info.seed}, `,
         fmt`${bold("Size")}: ${response.info.width}x${response.info.height}, `,
-        fmt`${bold("Worker")}: ${worker.name}, `,
+        fmt`${bold("Worker")}: ${worker.id}, `,
         fmt`${bold("Time taken")}: ${FmtDuration.format(jobDurationMs, { ignoreZero: true })}`,
       ]
       : [],
@@ -313,7 +313,7 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
   }));
 
   logger().debug(
-    `Job finished for ${formatUserChat(job.value)} using ${worker.name}${
+    `Job finished for ${formatUserChat(job.value)} using ${worker.id}${
       sendMediaAttempt > 1 ? ` after ${sendMediaAttempt} attempts` : ""
     }`,
   );
