@@ -106,6 +106,7 @@ const languageToFlagMap: Record<string, string> = {
 };
 
 export function getFlagEmoji(languageCode?: string): string | undefined {
-  if (!languageCode) return;
-  return languageToFlagMap[languageCode];
+  const language = languageCode?.split("-").pop()?.toLowerCase();
+  if (!language) return;
+  return languageToFlagMap[language];
 }
