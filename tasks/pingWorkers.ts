@@ -1,6 +1,6 @@
 import { Async, Log } from "../deps.ts";
 import { getGlobalSession } from "../bot/session.ts";
-import { sdGetConfig } from "../sd.ts";
+import { sdGetConfig } from "../common/sdApi.ts";
 
 const logger = () => Log.getLogger();
 

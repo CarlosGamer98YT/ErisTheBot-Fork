@@ -1,5 +1,5 @@
 import { FmtDuration, Log } from "../deps.ts";
-import { formatUserChat } from "../utils.ts";
+import { formatUserChat } from "../common/utils.ts";
 import { jobStore } from "../db/jobStore.ts";
 
 const logger = () => Log.getLogger();

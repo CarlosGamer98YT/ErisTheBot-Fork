@@ -11,8 +11,14 @@ import {
 } from "../deps.ts";
 import { bot } from "../bot/mod.ts";
 import { getGlobalSession, GlobalData, WorkerData } from "../bot/session.ts";
-import { fmt, formatUserChat } from "../utils.ts";
-import { SdApiError, sdImg2Img, SdProgressResponse, SdResponse, sdTxt2Img } from "../sd.ts";
+import { fmt, formatUserChat } from "../common/utils.ts";
+import {
+  SdApiError,
+  sdImg2Img,
+  SdProgressResponse,
+  SdResponse,
+  sdTxt2Img,
+} from "../common/sdApi.ts";
 import { JobSchema, jobStore } from "../db/jobStore.ts";
 import { runningWorkers } from "./pingWorkers.ts";
 

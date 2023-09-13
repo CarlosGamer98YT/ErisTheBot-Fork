@@ -1,7 +1,7 @@
 import { Collections, Grammy, GrammyStatelessQ } from "../deps.ts";
-import { formatUserChat } from "../utils.ts";
+import { formatUserChat } from "../common/utils.ts";
 import { jobStore } from "../db/jobStore.ts";
-import { parsePngInfo, PngInfo } from "../sd.ts";
+import { parsePngInfo, PngInfo } from "../common/parsePngInfo.ts";
 import { Context, logger } from "./mod.ts";
 
 export const img2imgQuestion = new GrammyStatelessQ.StatelessQuestion<Context>(

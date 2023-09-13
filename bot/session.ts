@@ -1,6 +1,6 @@
 import { db } from "../db/db.ts";
 import { Grammy, GrammyKvStorage } from "../deps.ts";
-import { SdApi, SdTxt2ImgRequest } from "../sd.ts";
+import { SdApi, SdTxt2ImgRequest } from "../common/sdApi.ts";
 
 export type SessionFlavor = Grammy.SessionFlavor<SessionData>;
 

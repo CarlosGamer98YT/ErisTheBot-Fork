@@ -1,5 +1,6 @@
 import { GrammyTypes, IKV } from "../deps.ts";
-import { PngInfo, SdTxt2ImgInfo } from "../sd.ts";
+import { SdTxt2ImgInfo } from "../common/sdApi.ts";
+import { PngInfo } from "../common/parsePngInfo.ts";
 import { db } from "./db.ts";
 
 export interface JobSchema {

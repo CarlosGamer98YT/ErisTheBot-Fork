@@ -1,5 +1,5 @@
 import { Grammy, GrammyAutoQuote, GrammyFiles, GrammyParseMode, Log } from "../deps.ts";
-import { formatUserChat } from "../utils.ts";
+import { formatUserChat } from "../common/utils.ts";
 import { session, SessionFlavor } from "./session.ts";
 import { queueCommand } from "./queueCommand.ts";
 import { txt2imgCommand, txt2imgQuestion } from "./txt2imgCommand.ts";

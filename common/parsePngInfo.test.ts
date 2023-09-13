@@ -3,7 +3,7 @@ import {
   assertEquals,
   assertMatch,
 } from "https://deno.land/std@0.135.0/testing/asserts.ts";
-import { parsePngInfo } from "./sd.ts";
+import { parsePngInfo } from "./parsePngInfo.ts";
 
 Deno.test("parses pnginfo", async (t) => {
   await t.step("1", () => {

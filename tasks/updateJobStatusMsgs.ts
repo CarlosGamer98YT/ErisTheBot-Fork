@@ -1,6 +1,6 @@
 import { Log } from "../deps.ts";
 import { bot } from "../bot/mod.ts";
-import { formatOrdinal } from "../utils.ts";
+import { formatOrdinal } from "../common/utils.ts";
 import { jobStore } from "../db/jobStore.ts";
 
 const logger = () => Log.getLogger();
