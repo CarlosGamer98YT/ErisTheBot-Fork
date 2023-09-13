@@ -161,7 +161,9 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
 
   // process the job
   const handleProgress = async (progress: SdProgressResponse) => {
+    // Important: don't let any errors escape this function
     if (job.value.status.type === "processing" && job.value.status.message) {
+      if (job.value.status.progress === progress.progress) return;
       await Promise.all([
         bot.api.sendChatAction(job.value.chat.id, "upload_photo", { maxAttempts: 1 }),
         bot.api.editMessageText(
@@ -182,7 +184,11 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
             message: value.status.type !== "done" ? value.status.message : undefined,
           },
         }), { maxAttempts: 1 }),
-      ]).catch(() => undefined);
+      ]).catch((err) =>
+        logger().warning(
+          `Updating job status for ${formatUserChat(job.value)} using ${worker.id} failed: ${err}`,
+        )
+      );
     }
   };
   let response: SdResponse<unknown>;
@@ -217,6 +223,7 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
       job.value.status.message.chat.id,
       job.value.status.message.message_id,
       `Uploading your images...`,
+      { maxAttempts: 1 },
     ).catch(() => undefined);
   }
 
@@ -275,7 +282,11 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
       });
       break;
     } catch (err) {
-      logger().warning(`Sending images (attempt ${sendMediaAttempt}) failed: ${err}`);
+      logger().warning(
+        `Sending images (attempt ${sendMediaAttempt}) for ${
+          formatUserChat(job.value)
+        } using ${worker.id} failed: ${err}`,
+      );
       if (sendMediaAttempt >= 6) throw err;
       // wait 2 * 5 seconds before retrying
       for (let i = 0; i < 2; i++) {

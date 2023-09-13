@@ -1,13 +1,17 @@
 import { Async, AsyncX, PngChunksExtract, PngChunkText } from "./deps.ts";
 
-const neverSignal = new AbortController().signal;
-
 export interface SdApi {
   url: string;
   auth?: string;
 }
 
-async function fetchSdApi<T>(api: SdApi, endpoint: string, body?: unknown): Promise<T> {
+async function fetchSdApi<T>(
+  api: SdApi,
+  endpoint: string,
+  { body, timeoutMs }: { body?: unknown; timeoutMs?: number } = {},
+): Promise<T> {
+  const controller = new AbortController();
+  const timeoutId = timeoutMs ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
   let options: RequestInit | undefined;
   if (body != null) {
     options = {
@@ -17,13 +21,18 @@ async function fetchSdApi<T>(api: SdApi, endpoint: string, body?: unknown): Prom
         ...api.auth ? { Authorization: api.auth } : {},
       },
       body: JSON.stringify(body),
+      signal: controller.signal,
     };
   } else if (api.auth) {
     options = {
       headers: { Authorization: api.auth },
+      signal: controller.signal,
     };
   }
   const response = await fetch(new URL(endpoint, api.url), options).catch(() => {
+    if (controller.signal.aborted) {
+      throw new SdApiError(endpoint, options, -1, "Timed out");
+    }
     throw new SdApiError(endpoint, options, 0, "Network error");
   });
   const result = await response.json().catch(() => {
@@ -31,6 +40,7 @@ async function fetchSdApi<T>(api: SdApi, endpoint: string, body?: unknown): Prom
       detail: "Invalid JSON",
     });
   });
+  clearTimeout(timeoutId);
   if (!response.ok) {
     throw new SdApiError(endpoint, options, response.status, response.statusText, result);
   }
@@ -78,9 +88,12 @@ export async function sdTxt2Img(
   api: SdApi,
   params: Partial<SdTxt2ImgRequest>,
   onProgress?: (progress: SdProgressResponse) => void,
-  signal: AbortSignal = neverSignal,
 ): Promise<SdResponse<SdTxt2ImgRequest>> {
-  const request = fetchSdApi<SdResponse<SdTxt2ImgRequest>>(api, "sdapi/v1/txt2img", params)
+  const request = fetchSdApi<SdResponse<SdTxt2ImgRequest>>(
+    api,
+    "sdapi/v1/txt2img",
+    { body: params },
+  )
     // JSON field "info" is a JSON-serialized string so we need to parse this part second time
     .then((data) => ({
       ...data,
@@ -89,13 +102,15 @@ export async function sdTxt2Img(
 
   try {
     while (true) {
-      await Async.abortable(Promise.race([request, Async.delay(4000)]), signal);
+      await Promise.race([request, Async.delay(3000)]);
       if (await AsyncX.promiseState(request) !== "pending") return await request;
-      onProgress?.(await fetchSdApi<SdProgressResponse>(api, "sdapi/v1/progress"));
+      onProgress?.(
+        await fetchSdApi<SdProgressResponse>(api, "sdapi/v1/progress", { timeoutMs: 10_000 }),
+      );
     }
   } finally {
     if (await AsyncX.promiseState(request) === "pending") {
-      await fetchSdApi(api, "sdapi/v1/interrupt", {});
+      await fetchSdApi(api, "sdapi/v1/interrupt", { timeoutMs: 10_000 });
     }
   }
 }
@@ -118,9 +133,12 @@ export async function sdImg2Img(
   api: SdApi,
   params: Partial<SdImg2ImgRequest>,
   onProgress?: (progress: SdProgressResponse) => void,
-  signal: AbortSignal = neverSignal,
 ): Promise<SdResponse<SdImg2ImgRequest>> {
-  const request = fetchSdApi<SdResponse<SdImg2ImgRequest>>(api, "sdapi/v1/img2img", params)
+  const request = fetchSdApi<SdResponse<SdImg2ImgRequest>>(
+    api,
+    "sdapi/v1/img2img",
+    { body: params },
+  )
     // JSON field "info" is a JSON-serialized string so we need to parse this part second time
     .then((data) => ({
       ...data,
@@ -129,13 +147,15 @@ export async function sdImg2Img(
 
   try {
     while (true) {
-      await Async.abortable(Promise.race([request, Async.delay(4000)]), signal);
+      await Promise.race([request, Async.delay(3000)]);
       if (await AsyncX.promiseState(request) !== "pending") return await request;
-      onProgress?.(await fetchSdApi<SdProgressResponse>(api, "sdapi/v1/progress"));
+      onProgress?.(
+        await fetchSdApi<SdProgressResponse>(api, "sdapi/v1/progress", { timeoutMs: 10_000 }),
+      );
     }
   } finally {
     if (await AsyncX.promiseState(request) === "pending") {
-      await fetchSdApi(api, "sdapi/v1/interrupt", {});
+      await fetchSdApi(api, "sdapi/v1/interrupt", { timeoutMs: 10_000 });
     }
   }
 }
@@ -220,7 +240,7 @@ export interface SdProgressState {
 }
 
 export function sdGetConfig(api: SdApi): Promise<SdConfigResponse> {
-  return fetchSdApi(api, "config");
+  return fetchSdApi(api, "config", { timeoutMs: 10_000 });
 }
 
 export interface SdConfigResponse {

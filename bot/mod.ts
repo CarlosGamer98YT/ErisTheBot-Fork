@@ -26,6 +26,27 @@ bot.use(session);
 
 bot.api.config.use(GrammyFiles.hydrateFiles(bot.token));
 
+// Automatically cancel requests after 30 seconds
+bot.api.config.use(async (prev, method, payload, signal) => {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, 30 * 1000);
+  signal?.addEventListener("abort", () => {
+    controller.abort();
+  });
+  try {
+    return await prev(method, payload, controller.signal);
+  } finally {
+    clearTimeout(timeout);
+    if (timedOut) {
+      logger().warning(`${method} timed out`);
+    }
+  }
+});
+
 // Automatically retry bot requests if we get a "too many requests" or telegram internal error
 bot.api.config.use(async (prev, method, payload, signal) => {
   const maxAttempts = payload && ("maxAttempts" in payload) ? payload.maxAttempts ?? 3 : 3;
