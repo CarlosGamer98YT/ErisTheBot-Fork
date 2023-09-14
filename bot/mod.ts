@@ -32,13 +32,15 @@ bot.api.config.use(async (prev, method, payload, signal) => {
   let timedOut = false;
   const timeout = setTimeout(() => {
     timedOut = true;
+    // TODO: this sometimes throws with "can't abort a locked stream" and crashes whole process
     controller.abort();
   }, 30 * 1000);
   signal?.addEventListener("abort", () => {
     controller.abort();
   });
   try {
-    return await prev(method, payload, controller.signal);
+    const result = await prev(method, payload, controller.signal);
+    return result;
   } finally {
     clearTimeout(timeout);
     if (timedOut) {
