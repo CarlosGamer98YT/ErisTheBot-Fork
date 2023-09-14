@@ -33,8 +33,12 @@ export async function processJobs(): Promise<never> {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     try {
-      // get first waiting job
-      const job = await jobStore.getBy("status.type", "waiting").then((jobs) => jobs[0]);
+      const jobs = await jobStore.getBy("status.type", "waiting");
+      // get first waiting job which hasn't errored in last minute
+      const job = jobs.find((job) =>
+        job.value.status.type === "waiting" &&
+        (job.value.status.lastErrorDate?.getTime() ?? 0) < Date.now() - 60_000
+      );
       if (!job) continue;
 
       // find a worker to handle the job
@@ -62,13 +66,20 @@ export async function processJobs(): Promise<never> {
           logger().error(
             `Job failed for ${formatUserChat(job.value)} via ${worker.id}: ${err}`,
           );
+          if (job.value.status.type === "processing" && job.value.status.message) {
+            await bot.api.deleteMessage(
+              job.value.status.message.chat.id,
+              job.value.status.message.message_id,
+            ).catch(() => undefined);
+          }
           if (err instanceof Grammy.GrammyError || err instanceof SdApiError) {
             await bot.api.sendMessage(
               job.value.chat.id,
               `Failed to generate your prompt using ${worker.name}: ${err.message}`,
               { reply_to_message_id: job.value.requestMessageId },
             ).catch(() => undefined);
-            await job.update({ status: { type: "waiting" } }).catch(() => undefined);
+            await job.update({ status: { type: "waiting", lastErrorDate: new Date() } })
+              .catch(() => undefined);
           }
           if (
             err instanceof SdApiError &&
@@ -169,10 +180,9 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
   const handleProgress = async (progress: SdProgressResponse) => {
     // Important: don't let any errors escape this function
     if (job.value.status.type === "processing" && job.value.status.message) {
-      if (job.value.status.progress === progress.progress) return;
       await Promise.all([
         bot.api.sendChatAction(job.value.chat.id, "upload_photo", { maxAttempts: 1 }),
-        bot.api.editMessageText(
+        progress.progress > job.value.status.progress && bot.api.editMessageText(
           job.value.status.message.chat.id,
           job.value.status.message.message_id,
           `Generating your prompt now... ${

@@ -17,7 +17,13 @@ export async function returnHangedJobs(): Promise<never> {
         // if job wasn't updated for 2 minutes, return it to the queue
         const timeSinceLastUpdateMs = Date.now() - job.value.status.updatedDate.getTime();
         if (timeSinceLastUpdateMs > 2 * 60 * 1000) {
-          await job.update({ status: { type: "waiting" } });
+          await job.update((value) => ({
+            ...value,
+            status: {
+              type: "waiting",
+              message: value.status.type !== "done" ? value.status.message : undefined,
+            },
+          }));
           logger().warning(
             `Job for ${formatUserChat(job.value)} was returned to the queue because it hanged for ${
               FmtDuration.format(Math.trunc(timeSinceLastUpdateMs / 1000) * 1000, {

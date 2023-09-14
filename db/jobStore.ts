@@ -21,6 +21,7 @@ export interface JobSchema {
     | {
       type: "waiting";
       message?: GrammyTypes.Message.TextMessage;
+      lastErrorDate?: Date;
     }
     | {
       type: "processing";
