@@ -73,22 +73,10 @@ async function img2img(
   const repliedToText = repliedToMsg?.text || repliedToMsg?.caption;
   if (includeRepliedTo && repliedToText) {
     // TODO: remove bot command from replied to text
-    const originalParams = parsePngInfo(repliedToText);
-    params = {
-      ...originalParams,
-      ...params,
-      prompt: [originalParams.prompt, params.prompt].filter(Boolean).join("\n"),
-      negative_prompt: [originalParams.negative_prompt, params.negative_prompt]
-        .filter(Boolean).join("\n"),
-    };
+    params = parsePngInfo(repliedToText, params);
   }
 
-  const messageParams = parsePngInfo(match ?? "");
-  params = {
-    ...params,
-    ...messageParams,
-    prompt: [params.prompt, messageParams.prompt].filter(Boolean).join("\n"),
-  };
+  params = parsePngInfo(match ?? "", params);
 
   if (!fileId) {
     await ctx.reply(

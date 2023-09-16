@@ -213,7 +213,14 @@ async function processJob(job: IKV.Model<JobSchema>, worker: WorkerData, config:
     case "txt2img":
       response = await sdTxt2Img(
         worker.api,
-        { ...config.defaultParams, ...job.value.task.params, ...size },
+        {
+          ...config.defaultParams,
+          ...job.value.task.params,
+          ...size,
+          negative_prompt: job.value.task.params.negative_prompt
+            ? job.value.task.params.negative_prompt
+            : config.defaultParams?.negative_prompt,
+        },
         handleProgress,
       );
       break;

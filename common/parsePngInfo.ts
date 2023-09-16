@@ -20,10 +20,14 @@ export interface PngInfo {
   denoising_strength: number;
 }
 
-export function parsePngInfo(pngInfo: string): Partial<PngInfo> {
+interface PngInfoExtra extends PngInfo {
+  upscale?: number;
+}
+
+export function parsePngInfo(pngInfo: string, baseParams?: Partial<PngInfo>): Partial<PngInfo> {
   const tags = pngInfo.split(/[,;]+|\.+\s|\n/u);
   let part: "prompt" | "negative_prompt" | "params" = "prompt";
-  const params: Partial<PngInfo> = {};
+  const params: Partial<PngInfoExtra> = {};
   const prompt: string[] = [];
   const negativePrompt: string[] = [];
   for (const tag of tags) {
@@ -72,6 +76,13 @@ export function parsePngInfo(pngInfo: string): Partial<PngInfo> {
           }
           break;
         }
+        case "upscale":
+        case "scale": {
+          part = "params";
+          const upscale = Number(value.trim());
+          if (upscale > 0) params.upscale = Math.min(upscale, 2);
+          break;
+        }
         case "denoisingstrength":
         case "denoising":
         case "denoise": {
@@ -113,5 +124,19 @@ export function parsePngInfo(pngInfo: string): Partial<PngInfo> {
   }
   if (prompt.length > 0) params.prompt = prompt.join(", ");
   if (negativePrompt.length > 0) params.negative_prompt = negativePrompt.join(", ");
-  return params;
+
+  // handle upscale
+  if (params.upscale && baseParams?.width && baseParams?.height) {
+    params.width = baseParams.width * params.upscale;
+    params.height = baseParams.height * params.upscale;
+  }
+
+  return {
+    ...baseParams,
+    ...params,
+    prompt: [baseParams?.prompt, params.prompt]
+      .filter(Boolean).join("\n"),
+    negative_prompt: [baseParams?.negative_prompt, params.negative_prompt]
+      .filter(Boolean).join("\n"),
+  };
 }

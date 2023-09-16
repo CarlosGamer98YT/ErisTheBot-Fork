@@ -50,35 +50,16 @@ async function txt2img(ctx: Context, match: string, includeRepliedTo: boolean): 
   if (includeRepliedTo && repliedToMsg?.document?.mime_type === "image/png") {
     const file = await ctx.api.getFile(repliedToMsg.document.file_id);
     const buffer = await fetch(file.getUrl()).then((resp) => resp.arrayBuffer());
-    const fileParams = parsePngInfo(getPngInfo(new Uint8Array(buffer)) ?? "");
-    params = {
-      ...params,
-      ...fileParams,
-      prompt: [params.prompt, fileParams.prompt].filter(Boolean).join("\n"),
-      negative_prompt: [params.negative_prompt, fileParams.negative_prompt]
-        .filter(Boolean).join("\n"),
-    };
+    params = parsePngInfo(getPngInfo(new Uint8Array(buffer)) ?? "", params);
   }
 
   const repliedToText = repliedToMsg?.text || repliedToMsg?.caption;
   if (includeRepliedTo && repliedToText) {
     // TODO: remove bot command from replied to text
-    const originalParams = parsePngInfo(repliedToText);
-    params = {
-      ...originalParams,
-      ...params,
-      prompt: [originalParams.prompt, params.prompt].filter(Boolean).join("\n"),
-      negative_prompt: [originalParams.negative_prompt, params.negative_prompt]
-        .filter(Boolean).join("\n"),
-    };
+    params = parsePngInfo(repliedToText, params);
   }
 
-  const messageParams = parsePngInfo(match);
-  params = {
-    ...params,
-    ...messageParams,
-    prompt: [params.prompt, messageParams.prompt].filter(Boolean).join("\n"),
-  };
+  params = parsePngInfo(match, params);
 
   if (!params.prompt) {
     await ctx.reply(
