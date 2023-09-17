@@ -11,7 +11,7 @@ export async function returnHangedJobs(): Promise<never> {
   while (true) {
     try {
       await new Promise((resolve) => setTimeout(resolve, 5000));
-      const jobs = await jobStore.getBy("status.type", "processing");
+      const jobs = await jobStore.getBy("status.type", { value: "processing" });
       for (const job of jobs) {
         if (job.value.status.type !== "processing") continue;
         // if job wasn't updated for 2 minutes, return it to the queue

@@ -5,7 +5,7 @@ export * as Collections from "https://deno.land/std@0.201.0/collections/mod.ts";
 export * as Base64 from "https://deno.land/std@0.201.0/encoding/base64.ts";
 export * as AsyncX from "https://deno.land/x/async@v2.0.2/mod.ts";
 export * as ULID from "https://deno.land/x/ulid@v0.3.0/mod.ts";
-export * as IKV from "https://deno.land/x/indexed_kv@v0.2.0/mod.ts";
+export * as IKV from "https://deno.land/x/indexed_kv@v0.3.0/mod.ts";
 export * as Grammy from "https://deno.land/x/grammy@v1.18.1/mod.ts";
 export * as GrammyTypes from "https://deno.land/x/grammy_types@v3.2.0/mod.ts";
 export * as GrammyAutoQuote from "https://deno.land/x/grammy_autoquote@v1.1.2/mod.ts";

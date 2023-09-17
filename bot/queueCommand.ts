@@ -11,9 +11,9 @@ export async function queueCommand(ctx: Grammy.CommandContext<Context>) {
   handleFutureUpdates().catch((err) => logger().warning(`Updating queue message failed: ${err}`));
 
   async function getMessageText() {
-    const processingJobs = await jobStore.getBy("status.type", "processing")
+    const processingJobs = await jobStore.getBy("status.type", { value: "processing" })
       .then((jobs) => jobs.map((job) => ({ ...job.value, place: 0 })));
-    const waitingJobs = await jobStore.getBy("status.type", "waiting")
+    const waitingJobs = await jobStore.getBy("status.type", { value: "waiting" })
       .then((jobs) => jobs.map((job, index) => ({ ...job.value, place: index + 1 })));
     const jobs = [...processingJobs, ...waitingJobs];
     const { bold } = GrammyParseMode;

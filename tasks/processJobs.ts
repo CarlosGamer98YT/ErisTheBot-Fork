@@ -33,7 +33,7 @@ export async function processJobs(): Promise<never> {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     try {
-      const jobs = await jobStore.getBy("status.type", "waiting");
+      const jobs = await jobStore.getBy("status.type", { value: "waiting" });
       // get first waiting job which hasn't errored in last minute
       const job = jobs.find((job) =>
         job.value.status.type === "waiting" &&

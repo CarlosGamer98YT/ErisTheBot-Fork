@@ -12,7 +12,7 @@ export async function updateJobStatusMsgs(): Promise<never> {
   while (true) {
     try {
       await new Promise((resolve) => setTimeout(resolve, 5000));
-      const jobs = await jobStore.getBy("status.type", "waiting");
+      const jobs = await jobStore.getBy("status.type", { value: "waiting" });
       for (const [index, job] of jobs.entries()) {
         if (job.value.status.type !== "waiting" || !job.value.status.message) continue;
         await bot.api.editMessageText(

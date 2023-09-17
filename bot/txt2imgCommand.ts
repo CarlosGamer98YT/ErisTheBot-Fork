@@ -27,7 +27,7 @@ async function txt2img(ctx: Context, match: string, includeRepliedTo: boolean): 
     return;
   }
 
-  const jobs = await jobStore.getBy("status.type", "waiting");
+  const jobs = await jobStore.getBy("status.type", { value: "waiting" });
   if (jobs.length >= ctx.session.global.maxJobs) {
     await ctx.reply(
       `The queue is full. Try again later. (Max queue size: ${ctx.session.global.maxJobs})`,

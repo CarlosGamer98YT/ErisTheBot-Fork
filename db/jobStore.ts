@@ -38,7 +38,12 @@ export interface JobSchema {
     };
 }
 
-export const jobStore = new IKV.Store(db, "job", {
-  schema: new IKV.Schema<JobSchema>(),
-  indices: ["status.type"],
+type JobIndices = {
+  "status.type": JobSchema["status"]["type"];
+};
+
+export const jobStore = new IKV.Store<JobSchema, JobIndices>(db, "job", {
+  indices: {
+    "status.type": { getValue: (job) => job.status.type },
+  },
 });
