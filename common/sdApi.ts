@@ -155,7 +155,7 @@ export async function sdImg2Img(
     }
   } finally {
     if (await AsyncX.promiseState(request) === "pending") {
-      await fetchSdApi(api, "sdapi/v1/interrupt", { timeoutMs: 10_000 });
+      await fetchSdApi(api, "sdapi/v1/interrupt", { body: {}, timeoutMs: 10_000 });
     }
   }
 }
