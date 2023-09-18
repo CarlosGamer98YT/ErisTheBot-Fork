@@ -5,6 +5,7 @@ import { queueCommand } from "./queueCommand.ts";
 import { txt2imgCommand, txt2imgQuestion } from "./txt2imgCommand.ts";
 import { pnginfoCommand, pnginfoQuestion } from "./pnginfoCommand.ts";
 import { img2imgCommand, img2imgQuestion } from "./img2imgCommand.ts";
+import { cancelCommand } from "./cancelCommand.ts";
 
 export const logger = () => Log.getLogger();
 
@@ -98,10 +99,11 @@ bot.api.setMyDescription(
     "Send /txt2img to generate an image.",
 );
 bot.api.setMyCommands([
-  { command: "txt2img", description: "Generate an image from text" },
-  { command: "img2img", description: "Generate an image based on another image" },
+  { command: "txt2img", description: "Generate image from text" },
+  { command: "img2img", description: "Generate image from image" },
   { command: "pnginfo", description: "Show generation parameters of an image" },
   { command: "queue", description: "Show the current queue" },
+  { command: "cancel", description: "Cancel all your requests" },
 ]);
 
 bot.command("start", (ctx) => ctx.reply("Hello! Use the /txt2img command to generate an image"));
@@ -116,6 +118,8 @@ bot.command("pnginfo", pnginfoCommand);
 bot.use(pnginfoQuestion.middleware());
 
 bot.command("queue", queueCommand);
+
+bot.command("cancel", cancelCommand);
 
 bot.command("pause", (ctx) => {
   if (!ctx.from?.username) return;
