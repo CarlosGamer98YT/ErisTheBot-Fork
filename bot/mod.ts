@@ -1,13 +1,30 @@
 import { Grammy, GrammyAutoQuote, GrammyFiles, GrammyParseMode, Log } from "../deps.ts";
-import { formatUserChat } from "../common/utils.ts";
-import { session, SessionFlavor } from "./session.ts";
+import { formatUserChat } from "../common/formatUserChat.ts";
 import { queueCommand } from "./queueCommand.ts";
 import { txt2imgCommand, txt2imgQuestion } from "./txt2imgCommand.ts";
 import { pnginfoCommand, pnginfoQuestion } from "./pnginfoCommand.ts";
 import { img2imgCommand, img2imgQuestion } from "./img2imgCommand.ts";
 import { cancelCommand } from "./cancelCommand.ts";
+import { getConfig, setConfig } from "../db/config.ts";
 
 export const logger = () => Log.getLogger();
+
+interface SessionData {
+  chat: ChatData;
+  user: UserData;
+}
+
+interface ChatData {
+  language?: string;
+}
+
+interface UserData {
+  params?: Record<string, string>;
+}
+
+export type Context =
+  & GrammyFiles.FileFlavor<GrammyParseMode.ParseModeFlavor<Grammy.Context>>
+  & Grammy.SessionFlavor<SessionData>;
 
 type WithRetryApi<T extends Grammy.RawApi> = {
   [M in keyof T]: T[M] extends (args: infer P, ...rest: infer A) => infer R
@@ -15,33 +32,50 @@ type WithRetryApi<T extends Grammy.RawApi> = {
     : T[M];
 };
 
-export type Context =
-  & GrammyFiles.FileFlavor<GrammyParseMode.ParseModeFlavor<Grammy.Context>>
-  & SessionFlavor;
-export const bot = new Grammy.Bot<Context, Grammy.Api<WithRetryApi<Grammy.RawApi>>>(
-  Deno.env.get("TG_BOT_TOKEN") ?? "",
-);
+type Api = Grammy.Api<WithRetryApi<Grammy.RawApi>>;
+
+export const bot = new Grammy.Bot<Context, Api>(Deno.env.get("TG_BOT_TOKEN")!);
+
 bot.use(GrammyAutoQuote.autoQuote);
 bot.use(GrammyParseMode.hydrateReply);
-bot.use(session);
+bot.use(Grammy.session<
+  SessionData,
+  Grammy.Context & Grammy.SessionFlavor<SessionData>
+>({
+  type: "multi",
+  chat: {
+    initial: () => ({}),
+  },
+  user: {
+    getSessionKey: (ctx) => ctx.from?.id.toFixed(),
+    initial: () => ({}),
+  },
+}));
 
 bot.api.config.use(GrammyFiles.hydrateFiles(bot.token));
 
 // Automatically cancel requests after 30 seconds
 bot.api.config.use(async (prev, method, payload, signal) => {
+  // don't time out getUpdates requests, they are long-polling
+  if (method === "getUpdates") return prev(method, payload, signal);
+
   const controller = new AbortController();
   let timedOut = false;
   const timeout = setTimeout(() => {
     timedOut = true;
-    // TODO: this sometimes throws with "can't abort a locked stream" and crashes whole process
-    controller.abort();
+    // TODO: this sometimes throws with "can't abort a locked stream", why?
+    try {
+      controller.abort();
+    } catch (error) {
+      logger().error(`Error while cancelling on timeout: ${error}`);
+    }
   }, 30 * 1000);
   signal?.addEventListener("abort", () => {
     controller.abort();
   });
+
   try {
-    const result = await prev(method, payload, controller.signal);
-    return result;
+    return await prev(method, payload, controller.signal);
   } finally {
     clearTimeout(timeout);
     if (timedOut) {
@@ -121,24 +155,26 @@ bot.command("queue", queueCommand);
 
 bot.command("cancel", cancelCommand);
 
-bot.command("pause", (ctx) => {
+bot.command("pause", async (ctx) => {
   if (!ctx.from?.username) return;
-  const config = ctx.session.global;
+  const config = await getConfig();
   if (!config.adminUsernames.includes(ctx.from.username)) return;
   if (config.pausedReason != null) {
     return ctx.reply(`Already paused: ${config.pausedReason}`);
   }
   config.pausedReason = ctx.match ?? "No reason given";
+  await setConfig(config);
   logger().warning(`Bot paused by ${ctx.from.first_name} because ${config.pausedReason}`);
   return ctx.reply("Paused");
 });
 
-bot.command("resume", (ctx) => {
+bot.command("resume", async (ctx) => {
   if (!ctx.from?.username) return;
-  const config = ctx.session.global;
+  const config = await getConfig();
   if (!config.adminUsernames.includes(ctx.from.username)) return;
   if (config.pausedReason == null) return ctx.reply("Already running");
   config.pausedReason = null;
+  await setConfig(config);
   logger().info(`Bot resumed by ${ctx.from.first_name}`);
   return ctx.reply("Resumed");
 });

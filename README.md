@@ -22,3 +22,12 @@ You can put these in `.env` file or pass them as environment variables.
 
 - Start stable diffusion webui: `cd sd-webui`, `./webui.sh --api`
 - Start bot: `deno task start`
+
+## Codegen
+
+The Stable Diffusion API in `common/sdApi.ts` is auto-generated. To regenerate it, first start your
+SD WebUI with `--nowebui --api`, and then run:
+
+```sh
+deno run npm:openapi-typescript http://localhost:7861/openapi.json -o common/sdApi.ts
+```

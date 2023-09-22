@@ -1,5 +1,4 @@
 import { Grammy, GrammyParseMode, GrammyStatelessQ } from "../deps.ts";
-import { fmt } from "../common/utils.ts";
 import { getPngInfo, parsePngInfo } from "../common/parsePngInfo.ts";
 import { Context } from "./mod.ts";
 
@@ -31,7 +30,7 @@ async function pnginfo(ctx: Context, includeRepliedTo: boolean): Promise<void> {
   const buffer = await fetch(file.getUrl()).then((resp) => resp.arrayBuffer());
   const params = parsePngInfo(getPngInfo(new Uint8Array(buffer)) ?? "");
 
-  const { bold } = GrammyParseMode;
+  const { bold, fmt } = GrammyParseMode;
 
   const paramsText = fmt([
     `${params.prompt}\n`,

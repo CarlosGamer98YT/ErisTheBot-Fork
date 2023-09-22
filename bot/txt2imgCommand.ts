@@ -1,8 +1,9 @@
 import { Grammy, GrammyStatelessQ } from "../deps.ts";
-import { formatUserChat } from "../common/utils.ts";
-import { jobStore } from "../db/jobStore.ts";
+import { formatUserChat } from "../common/formatUserChat.ts";
 import { getPngInfo, parsePngInfo, PngInfo } from "../common/parsePngInfo.ts";
 import { Context, logger } from "./mod.ts";
+import { generationQueue } from "../tasks/generationQueue.ts";
+import { getConfig } from "../db/config.ts";
 
 export const txt2imgQuestion = new GrammyStatelessQ.StatelessQuestion<Context>(
   "txt2img",
@@ -22,23 +23,25 @@ async function txt2img(ctx: Context, match: string, includeRepliedTo: boolean): 
     return;
   }
 
-  if (ctx.session.global.pausedReason != null) {
-    await ctx.reply(`I'm paused: ${ctx.session.global.pausedReason || "No reason given"}`);
+  const config = await getConfig();
+
+  if (config.pausedReason != null) {
+    await ctx.reply(`I'm paused: ${config.pausedReason || "No reason given"}`);
     return;
   }
 
-  const jobs = await jobStore.getBy("status.type", { value: "waiting" });
-  if (jobs.length >= ctx.session.global.maxJobs) {
+  const jobs = await generationQueue.getAllJobs();
+  if (jobs.length >= config.maxJobs) {
     await ctx.reply(
-      `The queue is full. Try again later. (Max queue size: ${ctx.session.global.maxJobs})`,
+      `The queue is full. Try again later. (Max queue size: ${config.maxJobs})`,
     );
     return;
   }
 
-  const userJobs = jobs.filter((job) => job.value.from.id === ctx.message?.from?.id);
-  if (userJobs.length >= ctx.session.global.maxUserJobs) {
+  const userJobs = jobs.filter((job) => job.state.from.id === ctx.message?.from?.id);
+  if (userJobs.length >= config.maxUserJobs) {
     await ctx.reply(
-      `You already have ${ctx.session.global.maxUserJobs} jobs in queue. Try again later.`,
+      `You already have ${config.maxUserJobs} jobs in queue. Try again later.`,
     );
     return;
   }
@@ -72,12 +75,12 @@ async function txt2img(ctx: Context, match: string, includeRepliedTo: boolean): 
 
   const replyMessage = await ctx.reply("Accepted. You are now in queue.");
 
-  await jobStore.create({
+  await generationQueue.pushJob({
     task: { type: "txt2img", params },
     from: ctx.message.from,
     chat: ctx.message.chat,
-    requestMessageId: ctx.message.message_id,
-    status: { type: "waiting", message: replyMessage },
+    requestMessage: ctx.message,
+    replyMessage: replyMessage,
   });
 
   logger().debug(`Job enqueued for ${formatUserChat(ctx.message)}`);
