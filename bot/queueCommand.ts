@@ -6,7 +6,7 @@ import { getConfig } from "../db/config.ts";
 
 export async function queueCommand(ctx: Grammy.CommandContext<Context>) {
   let formattedMessage = await getMessageText();
-  const queueMessage = await ctx.replyFmt(formattedMessage);
+  const queueMessage = await ctx.replyFmt(formattedMessage, { disable_notification: true });
   handleFutureUpdates().catch((err) => logger().warning(`Updating queue message failed: ${err}`));
 
   async function getMessageText() {
