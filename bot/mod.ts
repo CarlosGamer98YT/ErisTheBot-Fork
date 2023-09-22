@@ -34,7 +34,12 @@ type WithRetryApi<T extends Grammy.RawApi> = {
 
 type Api = Grammy.Api<WithRetryApi<Grammy.RawApi>>;
 
-export const bot = new Grammy.Bot<Context, Api>(Deno.env.get("TG_BOT_TOKEN")!);
+export const bot = new Grammy.Bot<Context, Api>(
+  Deno.env.get("TG_BOT_TOKEN")!,
+  {
+    client: { timeoutSeconds: 30 },
+  },
+);
 
 bot.use(GrammyAutoQuote.autoQuote);
 bot.use(GrammyParseMode.hydrateReply);
@@ -53,36 +58,6 @@ bot.use(Grammy.session<
 }));
 
 bot.api.config.use(GrammyFiles.hydrateFiles(bot.token));
-
-// Automatically cancel requests after 30 seconds
-bot.api.config.use(async (prev, method, payload, signal) => {
-  // don't time out getUpdates requests, they are long-polling
-  if (method === "getUpdates") return prev(method, payload, signal);
-
-  const controller = new AbortController();
-  let timedOut = false;
-  const timeout = setTimeout(() => {
-    timedOut = true;
-    // TODO: this sometimes throws with "can't abort a locked stream", why?
-    try {
-      controller.abort();
-    } catch (error) {
-      logger().error(`Error while cancelling on timeout: ${error}`);
-    }
-  }, 30 * 1000);
-  signal?.addEventListener("abort", () => {
-    controller.abort();
-  });
-
-  try {
-    return await prev(method, payload, controller.signal);
-  } finally {
-    clearTimeout(timeout);
-    if (timedOut) {
-      logger().warning(`${method} timed out`);
-    }
-  }
-});
 
 // Automatically retry bot requests if we get a "too many requests" or telegram internal error
 bot.api.config.use(async (prev, method, payload, signal) => {
