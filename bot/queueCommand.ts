@@ -42,7 +42,7 @@ export async function queueCommand(ctx: Grammy.CommandContext<Context>) {
         : ["Queue is empty.\n"],
       "\nActive workers:\n",
       ...config.sdInstances.flatMap((sdInstance) => [
-        activeGenerationWorkers.has(sdInstance.id) ? "✅ " : "☠️ ",
+        activeGenerationWorkers.get(sdInstance.id)?.isProcessing ? "✅ " : "☠️ ",
         fmt`${bold(sdInstance.name || sdInstance.id)} `,
         `(max ${(sdInstance.maxResolution / 1000000).toFixed(1)} Mpx) `,
         "\n",
