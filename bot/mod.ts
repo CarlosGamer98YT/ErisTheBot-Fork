@@ -1,11 +1,11 @@
 import { Grammy, GrammyAutoQuote, GrammyFiles, GrammyParseMode, Log } from "../deps.ts";
-import { formatUserChat } from "../common/formatUserChat.ts";
+import { formatUserChat } from "../utils/formatUserChat.ts";
 import { queueCommand } from "./queueCommand.ts";
 import { txt2imgCommand, txt2imgQuestion } from "./txt2imgCommand.ts";
 import { pnginfoCommand, pnginfoQuestion } from "./pnginfoCommand.ts";
 import { img2imgCommand, img2imgQuestion } from "./img2imgCommand.ts";
 import { cancelCommand } from "./cancelCommand.ts";
-import { getConfig, setConfig } from "../db/config.ts";
+import { getConfig, setConfig } from "../app/config.ts";
 
 export const logger = () => Log.getLogger();
 

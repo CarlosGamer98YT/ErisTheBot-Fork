@@ -14,7 +14,7 @@ Log.setup({
 
 // Main program logic
 import { bot } from "./bot/mod.ts";
-import { runAllTasks } from "./tasks/mod.ts";
+import { runAllTasks } from "./app/mod.ts";
 await Promise.all([
   bot.start(),
   runAllTasks(),

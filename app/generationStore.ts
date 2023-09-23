@@ -1,5 +1,5 @@
 import { GrammyTypes, IKV } from "../deps.ts";
-import { PngInfo } from "../common/parsePngInfo.ts";
+import { PngInfo } from "../sd/parsePngInfo.ts";
 import { db } from "./db.ts";
 
 export interface GenerationSchema {

@@ -1,5 +1,5 @@
 import { Grammy, GrammyParseMode, GrammyStatelessQ } from "../deps.ts";
-import { getPngInfo, parsePngInfo } from "../common/parsePngInfo.ts";
+import { getPngInfo, parsePngInfo } from "../sd/parsePngInfo.ts";
 import { Context } from "./mod.ts";
 
 export const pnginfoQuestion = new GrammyStatelessQ.StatelessQuestion<Context>(

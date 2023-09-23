@@ -1,9 +1,9 @@
 import { Collections, Grammy, GrammyStatelessQ } from "../deps.ts";
-import { formatUserChat } from "../common/formatUserChat.ts";
-import { parsePngInfo, PngInfo } from "../common/parsePngInfo.ts";
+import { formatUserChat } from "../utils/formatUserChat.ts";
+import { parsePngInfo, PngInfo } from "../sd/parsePngInfo.ts";
 import { Context, logger } from "./mod.ts";
-import { generationQueue } from "../tasks/generationQueue.ts";
-import { getConfig } from "../db/config.ts";
+import { generationQueue } from "../app/generationQueue.ts";
+import { getConfig } from "../app/config.ts";
 
 export const img2imgQuestion = new GrammyStatelessQ.StatelessQuestion<Context>(
   "img2img",

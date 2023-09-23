@@ -1,8 +1,8 @@
 import { Grammy, GrammyParseMode } from "../deps.ts";
 import { Context, logger } from "./mod.ts";
-import { getFlagEmoji } from "../common/getFlagEmoji.ts";
-import { activeGenerationWorkers, generationQueue } from "../tasks/generationQueue.ts";
-import { getConfig } from "../db/config.ts";
+import { getFlagEmoji } from "../utils/getFlagEmoji.ts";
+import { activeGenerationWorkers, generationQueue } from "../app/generationQueue.ts";
+import { getConfig } from "../app/config.ts";
 
 export async function queueCommand(ctx: Grammy.CommandContext<Context>) {
   let formattedMessage = await getMessageText();

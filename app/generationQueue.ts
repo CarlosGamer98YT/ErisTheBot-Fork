@@ -1,10 +1,10 @@
 import { bot } from "../bot/mod.ts";
-import { PngInfo } from "../common/parsePngInfo.ts";
-import * as SdApi from "../common/sdApi.ts";
-import { formatUserChat } from "../common/formatUserChat.ts";
-import { getConfig, SdInstanceData } from "../db/config.ts";
-import { db } from "../db/db.ts";
-import { generationStore, SdGenerationInfo } from "../db/jobStore.ts";
+import { PngInfo } from "../sd/parsePngInfo.ts";
+import * as SdApi from "../sd/sdApi.ts";
+import { formatUserChat } from "../utils/formatUserChat.ts";
+import { getConfig, SdInstanceData } from "./config.ts";
+import { db } from "./db.ts";
+import { generationStore, SdGenerationInfo } from "./generationStore.ts";
 import {
   Async,
   AsyncX,
@@ -18,9 +18,8 @@ import {
   KVMQ,
   Log,
 } from "../deps.ts";
-import { formatOrdinal } from "../common/formatOrdinal.ts";
-import { deadline } from "../common/deadline.ts";
-import { SdError } from "../common/SdError.ts";
+import { formatOrdinal } from "../utils/formatOrdinal.ts";
+import { SdError } from "../sd/SdError.ts";
 
 const logger = () => Log.getLogger();
 
@@ -66,7 +65,7 @@ export async function restartGenerationWorkers() {
       // check if worker is up
 
       const activeWorkerStatus = await activeWorkerSdClient.GET("/sdapi/v1/memory", {
-        signal: deadline(10_000),
+        signal: AbortSignal.timeout(10_000),
       })
         .then((response) => {
           if (!response.data) {
@@ -233,7 +232,7 @@ async function processGenerationJob(
     await Async.delay(3000);
     const progressResponse = await workerSdClient.GET("/sdapi/v1/progress", {
       params: {},
-      signal: deadline(15_000),
+      signal: AbortSignal.timeout(15_000),
     });
     if (!progressResponse.data) {
       throw new SdError(

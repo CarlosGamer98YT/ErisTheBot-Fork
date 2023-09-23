@@ -1,4 +1,4 @@
-import { generationQueue } from "../tasks/generationQueue.ts";
+import { generationQueue } from "../app/generationQueue.ts";
 import { Context } from "./mod.ts";
 
 export async function cancelCommand(ctx: Context) {
