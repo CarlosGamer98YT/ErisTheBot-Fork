@@ -1,7 +1,7 @@
 import { generationQueue } from "../app/generationQueue.ts";
-import { Context } from "./mod.ts";
+import { ErisContext } from "./mod.ts";
 
-export async function cancelCommand(ctx: Context) {
+export async function cancelCommand(ctx: ErisContext) {
   const jobs = await generationQueue.getAllJobs();
   const userJobs = jobs
     .filter((job) => job.lockUntil < new Date())

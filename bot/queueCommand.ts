@@ -1,10 +1,11 @@
-import { Grammy, GrammyParseMode } from "../deps.ts";
-import { Context } from "./mod.ts";
-import { getFlagEmoji } from "../utils/getFlagEmoji.ts";
-import { activeGenerationWorkers, generationQueue } from "../app/generationQueue.ts";
+import { CommandContext } from "grammy";
+import { bold, fmt } from "grammy_parse_mode";
 import { getConfig } from "../app/config.ts";
+import { activeGenerationWorkers, generationQueue } from "../app/generationQueue.ts";
+import { getFlagEmoji } from "../utils/getFlagEmoji.ts";
+import { ErisContext } from "./mod.ts";
 
-export async function queueCommand(ctx: Grammy.CommandContext<Context>) {
+export async function queueCommand(ctx: CommandContext<ErisContext>) {
   let formattedMessage = await getMessageText();
   const queueMessage = await ctx.replyFmt(formattedMessage, { disable_notification: true });
   handleFutureUpdates().catch(() => undefined);
@@ -18,7 +19,6 @@ export async function queueCommand(ctx: Grammy.CommandContext<Context>) {
       .filter((job) => job.lockUntil <= new Date())
       .map((job, index) => ({ ...job, index: index + 1 }));
     const jobs = [...processingJobs, ...waitingJobs];
-    const { bold, fmt } = GrammyParseMode;
 
     return fmt([
       "Current queue:\n",

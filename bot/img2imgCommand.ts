@@ -1,11 +1,13 @@
-import { Collections, Grammy, GrammyStatelessQ } from "../deps.ts";
-import { formatUserChat } from "../utils/formatUserChat.ts";
-import { parsePngInfo, PngInfo } from "../sd/parsePngInfo.ts";
-import { Context, logger } from "./mod.ts";
-import { generationQueue } from "../app/generationQueue.ts";
+import { CommandContext } from "grammy";
+import { StatelessQuestion } from "grammy_stateless_question";
+import { maxBy } from "std/collections";
 import { getConfig } from "../app/config.ts";
+import { generationQueue } from "../app/generationQueue.ts";
+import { parsePngInfo, PngInfo } from "../sd/parsePngInfo.ts";
+import { formatUserChat } from "../utils/formatUserChat.ts";
+import { ErisContext, logger } from "./mod.ts";
 
-export const img2imgQuestion = new GrammyStatelessQ.StatelessQuestion<Context>(
+export const img2imgQuestion = new StatelessQuestion<ErisContext>(
   "img2img",
   async (ctx, state) => {
     // todo: also save original image size in state
@@ -13,12 +15,12 @@ export const img2imgQuestion = new GrammyStatelessQ.StatelessQuestion<Context>(
   },
 );
 
-export async function img2imgCommand(ctx: Grammy.CommandContext<Context>) {
+export async function img2imgCommand(ctx: CommandContext<ErisContext>) {
   await img2img(ctx, ctx.match, true);
 }
 
 async function img2img(
-  ctx: Context,
+  ctx: ErisContext,
   match: string | undefined,
   includeRepliedTo: boolean,
   fileId?: string,
@@ -57,7 +59,7 @@ async function img2img(
 
   if (includeRepliedTo && repliedToMsg?.photo) {
     const photos = repliedToMsg.photo;
-    const biggestPhoto = Collections.maxBy(photos, (p) => p.width * p.height);
+    const biggestPhoto = maxBy(photos, (p) => p.width * p.height);
     if (!biggestPhoto) throw new Error("Message was a photo but had no photos?");
     fileId = biggestPhoto.file_id;
     params.width = biggestPhoto.width;
@@ -66,7 +68,7 @@ async function img2img(
 
   if (ctx.message.photo) {
     const photos = ctx.message.photo;
-    const biggestPhoto = Collections.maxBy(photos, (p) => p.width * p.height);
+    const biggestPhoto = maxBy(photos, (p) => p.width * p.height);
     if (!biggestPhoto) throw new Error("Message was a photo but had no photos?");
     fileId = biggestPhoto.file_id;
     params.width = biggestPhoto.width;

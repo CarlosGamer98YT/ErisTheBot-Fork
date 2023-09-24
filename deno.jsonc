@@ -4,5 +4,27 @@
   },
   "fmt": {
     "lineWidth": 100
+  },
+  "imports": {
+    "std/log": "https://deno.land/std@0.201.0/log/mod.ts",
+    "std/async": "https://deno.land/std@0.201.0/async/mod.ts",
+    "std/fmt/duration": "https://deno.land/std@0.202.0/fmt/duration.ts",
+    "std/collections": "https://deno.land/std@0.202.0/collections/mod.ts",
+    "std/encoding/base64": "https://deno.land/std@0.202.0/encoding/base64.ts",
+    "async": "https://deno.land/x/async@v2.0.2/mod.ts",
+    "ulid": "https://deno.land/x/ulid@v0.3.0/mod.ts",
+    "indexed_kv": "https://deno.land/x/indexed_kv@v0.4.0/mod.ts",
+    "kvmq": "https://deno.land/x/kvmq@v0.2.0/mod.ts",
+    "kvfs": "https://deno.land/x/kvfs@v0.1.0/mod.ts",
+    "grammy": "https://lib.deno.dev/x/grammy@1/mod.ts",
+    "grammy_types": "https://lib.deno.dev/x/grammy_types@3/mod.ts",
+    "grammy_autoquote": "https://lib.deno.dev/x/grammy_autoquote@1/mod.ts",
+    "grammy_parse_mode": "https://lib.deno.dev/x/grammy_parse_mode@1/mod.ts",
+    "grammy_stateless_question": "https://lib.deno.dev/x/grammy_stateless_question_alpha@3/mod.ts",
+    "grammy_files": "https://lib.deno.dev/x/grammy_files@1/mod.ts",
+    "file_type": "https://esm.sh/file-type@18.5.0",
+    "png_chunks_extract": "https://esm.sh/png-chunks-extract@1.0.0",
+    "png_chunk_text": "https://esm.sh/png-chunk-text@1.0.0",
+    "openapi_fetch": "https://esm.sh/openapi-fetch@0.7.6"
   }
 }

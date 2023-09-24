@@ -1,25 +1,23 @@
+import { promiseState } from "async";
+import { Chat, Message, User } from "grammy_types";
+import { JobData, Queue, Worker } from "kvmq";
+import createOpenApiClient from "openapi_fetch";
+import { delay } from "std/async";
+import { decode, encode } from "std/encoding/base64";
+import { getLogger } from "std/log";
+import { ulid } from "ulid";
 import { bot } from "../bot/mod.ts";
+import { SdError } from "../sd/SdError.ts";
 import { PngInfo } from "../sd/parsePngInfo.ts";
 import * as SdApi from "../sd/sdApi.ts";
+import { formatOrdinal } from "../utils/formatOrdinal.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
 import { getConfig, SdInstanceData } from "./config.ts";
 import { db, fs } from "./db.ts";
 import { SdGenerationInfo } from "./generationStore.ts";
-import {
-  Async,
-  AsyncX,
-  Base64,
-  createOpenApiClient,
-  GrammyTypes,
-  KVMQ,
-  Log,
-  ULID,
-} from "../deps.ts";
-import { formatOrdinal } from "../utils/formatOrdinal.ts";
-import { SdError } from "../sd/SdError.ts";
 import { uploadQueue } from "./uploadQueue.ts";
 
-const logger = () => Log.getLogger();
+const logger = () => getLogger();
 
 interface GenerationJob {
   task:
@@ -32,17 +30,17 @@ interface GenerationJob {
       params: Partial<PngInfo>;
       fileId: string;
     };
-  from: GrammyTypes.User;
-  chat: GrammyTypes.Chat;
-  requestMessage: GrammyTypes.Message;
-  replyMessage: GrammyTypes.Message;
+  from: User;
+  chat: Chat;
+  requestMessage: Message;
+  replyMessage: Message;
   sdInstanceId?: string;
   progress?: number;
 }
 
-export const generationQueue = new KVMQ.Queue<GenerationJob>(db, "jobQueue");
+export const generationQueue = new Queue<GenerationJob>(db, "jobQueue");
 
-export const activeGenerationWorkers = new Map<string, KVMQ.Worker<GenerationJob>>();
+export const activeGenerationWorkers = new Map<string, Worker<GenerationJob>>();
 
 /**
  * Initializes queue workers for each SD instance when they become online.
@@ -104,7 +102,7 @@ export async function processGenerationQueue() {
       activeGenerationWorkers.set(sdInstance.id, newWorker);
       logger().info(`Started worker ${sdInstance.id}`);
     }
-    await Async.delay(60_000);
+    await delay(60_000);
   }
 }
 
@@ -113,7 +111,7 @@ export async function processGenerationQueue() {
  */
 async function processGenerationJob(
   state: GenerationJob,
-  updateJob: (job: Partial<KVMQ.JobData<GenerationJob>>) => Promise<void>,
+  updateJob: (job: Partial<JobData<GenerationJob>>) => Promise<void>,
   sdInstance: SdInstanceData,
 ) {
   const startDate = new Date();
@@ -185,7 +183,7 @@ async function processGenerationJob(
           ? state.task.params.negative_prompt
           : config.defaultParams?.negative_prompt,
         init_images: [
-          Base64.encode(
+          encode(
             await fetch(
               `https://api.telegram.org/file/bot${bot.token}/${await bot.api.getFile(
                 state.task.fileId,
@@ -229,8 +227,8 @@ async function processGenerationJob(
       { maxAttempts: 1 },
     ).catch(() => undefined);
 
-    await Promise.race([Async.delay(3000), responsePromise]).catch(() => undefined);
-  } while (await AsyncX.promiseState(responsePromise) === "pending");
+    await Promise.race([delay(3000), responsePromise]).catch(() => undefined);
+  } while (await promiseState(responsePromise) === "pending");
 
   // check response
   const response = await responsePromise;
@@ -247,8 +245,8 @@ async function processGenerationJob(
   // save images to db
   const imageKeys: Deno.KvKey[] = [];
   for (const imageBase64 of response.data.images) {
-    const imageBuffer = Base64.decode(imageBase64);
-    const imageKey = ["images", "upload", ULID.ulid()];
+    const imageBuffer = decode(imageBase64);
+    const imageKey = ["images", "upload", ulid()];
     await fs.set(imageKey, imageBuffer, { expireIn: 30 * 60 * 1000 });
     imageKeys.push(imageKey);
   }
@@ -301,6 +299,6 @@ export async function updateGenerationQueue() {
         { maxAttempts: 1 },
       ).catch(() => undefined);
     }
-    await Async.delay(3000);
+    await delay(3000);
   }
 }

@@ -1,19 +1,21 @@
-import { Grammy, GrammyParseMode, GrammyStatelessQ } from "../deps.ts";
+import { CommandContext } from "grammy";
+import { bold, fmt } from "grammy_parse_mode";
+import { StatelessQuestion } from "grammy_stateless_question";
 import { getPngInfo, parsePngInfo } from "../sd/parsePngInfo.ts";
-import { Context } from "./mod.ts";
+import { ErisContext } from "./mod.ts";
 
-export const pnginfoQuestion = new GrammyStatelessQ.StatelessQuestion<Context>(
+export const pnginfoQuestion = new StatelessQuestion<ErisContext>(
   "pnginfo",
   async (ctx) => {
     await pnginfo(ctx, false);
   },
 );
 
-export async function pnginfoCommand(ctx: Grammy.CommandContext<Context>) {
+export async function pnginfoCommand(ctx: CommandContext<ErisContext>) {
   await pnginfo(ctx, true);
 }
 
-async function pnginfo(ctx: Context, includeRepliedTo: boolean): Promise<void> {
+async function pnginfo(ctx: ErisContext, includeRepliedTo: boolean): Promise<void> {
   const document = ctx.message?.document ||
     (includeRepliedTo ? ctx.message?.reply_to_message?.document : undefined);
 
@@ -29,8 +31,6 @@ async function pnginfo(ctx: Context, includeRepliedTo: boolean): Promise<void> {
   const file = await ctx.api.getFile(document.file_id);
   const buffer = await fetch(file.getUrl()).then((resp) => resp.arrayBuffer());
   const params = parsePngInfo(getPngInfo(new Uint8Array(buffer)) ?? "");
-
-  const { bold, fmt } = GrammyParseMode;
 
   const paramsText = fmt([
     `${params.prompt}\n`,

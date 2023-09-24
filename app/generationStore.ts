@@ -1,9 +1,10 @@
-import { GrammyTypes, IKV } from "../deps.ts";
+import { Chat, User } from "grammy_types";
+import { Store } from "indexed_kv";
 import { db } from "./db.ts";
 
 export interface GenerationSchema {
-  from: GrammyTypes.User;
-  chat: GrammyTypes.Chat;
+  from: User;
+  chat: Chat;
   sdInstanceId?: string;
   info?: SdGenerationInfo;
   startDate?: Date;
@@ -49,7 +50,7 @@ type GenerationIndices = {
   chatId: number;
 };
 
-export const generationStore = new IKV.Store<GenerationSchema, GenerationIndices>(
+export const generationStore = new Store<GenerationSchema, GenerationIndices>(
   db,
   "generations",
   {

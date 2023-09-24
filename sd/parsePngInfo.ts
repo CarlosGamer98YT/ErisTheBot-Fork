@@ -1,9 +1,10 @@
-import { pngChunksExtract, pngChunkTextDecode } from "../deps.ts";
+import { decode } from "png_chunk_text";
+import extractChunks from "png_chunks_extract";
 
 export function getPngInfo(pngData: Uint8Array): string | undefined {
-  return pngChunksExtract(pngData)
+  return extractChunks(pngData)
     .filter((chunk) => chunk.name === "tEXt")
-    .map((chunk) => pngChunkTextDecode(chunk.data))
+    .map((chunk) => decode(chunk.data))
     .find((textChunk) => textChunk.keyword === "parameters")
     ?.text;
 }

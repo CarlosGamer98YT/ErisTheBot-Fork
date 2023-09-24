@@ -1,7 +1,7 @@
-import { GrammyTypes } from "../deps.ts";
+import { Chat, User } from "grammy_types";
 
 export function formatUserChat(
-  ctx: { from?: GrammyTypes.User; chat?: GrammyTypes.Chat; sdInstanceId?: string },
+  ctx: { from?: User; chat?: Chat; sdInstanceId?: string },
 ) {
   const msg: string[] = [];
   if (ctx.from) {

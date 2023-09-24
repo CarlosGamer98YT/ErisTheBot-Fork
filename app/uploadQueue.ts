@@ -1,16 +1,22 @@
+import { fileTypeFromBuffer } from "file_type";
+import { InputFile, InputMediaBuilder } from "grammy";
+import { bold, fmt } from "grammy_parse_mode";
+import { Chat, Message, User } from "grammy_types";
+import { Queue } from "kvmq";
+import { format } from "std/fmt/duration";
+import { getLogger } from "std/log";
 import { bot } from "../bot/mod.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
 import { db, fs } from "./db.ts";
 import { generationStore, SdGenerationInfo } from "./generationStore.ts";
-import { FileType, FmtDuration, Grammy, GrammyParseMode, GrammyTypes, KVMQ, Log } from "../deps.ts";
 
-const logger = () => Log.getLogger();
+const logger = () => getLogger();
 
 interface UploadJob {
-  from: GrammyTypes.User;
-  chat: GrammyTypes.Chat;
-  requestMessage: GrammyTypes.Message;
-  replyMessage: GrammyTypes.Message;
+  from: User;
+  chat: Chat;
+  requestMessage: Message;
+  replyMessage: Message;
   sdInstanceId: string;
   startDate: Date;
   endDate: Date;
@@ -18,7 +24,7 @@ interface UploadJob {
   info: SdGenerationInfo;
 }
 
-export const uploadQueue = new KVMQ.Queue<UploadJob>(db, "uploadQueue");
+export const uploadQueue = new Queue<UploadJob>(db, "uploadQueue");
 
 /**
  * Initializes queue worker for uploading images to Telegram.
@@ -37,7 +43,6 @@ export async function processUploadQueue() {
     // const detailedReply = Object.keys(job.value.params).filter((key) => key !== "prompt").length > 0;
     const detailedReply = true;
     const jobDurationMs = Math.trunc((Date.now() - state.startDate.getTime()) / 1000) * 1000;
-    const { bold, fmt } = GrammyParseMode;
     const caption = fmt([
       `${state.info.prompt}\n`,
       ...detailedReply
@@ -51,7 +56,7 @@ export async function processUploadQueue() {
           fmt`${bold("Seed:")} ${state.info.seed}, `,
           fmt`${bold("Size")}: ${state.info.width}x${state.info.height}, `,
           fmt`${bold("Worker")}: ${state.sdInstanceId}, `,
-          fmt`${bold("Time taken")}: ${FmtDuration.format(jobDurationMs, { ignoreZero: true })}`,
+          fmt`${bold("Time taken")}: ${format(jobDurationMs, { ignoreZero: true })}`,
         ]
         : [],
     ]);
@@ -61,10 +66,10 @@ export async function processUploadQueue() {
       state.imageKeys.map(async (fileKey, idx) => {
         const imageBuffer = await fs.get(fileKey).then((entry) => entry.value);
         if (!imageBuffer) throw new Error("File not found");
-        const imageType = await FileType.fileTypeFromBuffer(imageBuffer);
+        const imageType = await fileTypeFromBuffer(imageBuffer);
         if (!imageType) throw new Error("Image has unknown type");
-        return Grammy.InputMediaBuilder.photo(
-          new Grammy.InputFile(imageBuffer, `image${idx}.${imageType.ext}`),
+        return InputMediaBuilder.photo(
+          new InputFile(imageBuffer, `image${idx}.${imageType.ext}`),
           // if it can fit, add caption for first photo
           idx === 0 && caption.text.length <= 1024
             ? { caption: caption.text, caption_entities: caption.entities }

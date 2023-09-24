@@ -1,11 +1,12 @@
-import { Grammy, GrammyStatelessQ } from "../deps.ts";
-import { formatUserChat } from "../utils/formatUserChat.ts";
-import { getPngInfo, parsePngInfo, PngInfo } from "../sd/parsePngInfo.ts";
-import { Context, logger } from "./mod.ts";
-import { generationQueue } from "../app/generationQueue.ts";
+import { CommandContext } from "grammy";
+import { StatelessQuestion } from "grammy_stateless_question";
 import { getConfig } from "../app/config.ts";
+import { generationQueue } from "../app/generationQueue.ts";
+import { getPngInfo, parsePngInfo, PngInfo } from "../sd/parsePngInfo.ts";
+import { formatUserChat } from "../utils/formatUserChat.ts";
+import { ErisContext, logger } from "./mod.ts";
 
-export const txt2imgQuestion = new GrammyStatelessQ.StatelessQuestion<Context>(
+export const txt2imgQuestion = new StatelessQuestion<ErisContext>(
   "txt2img",
   async (ctx) => {
     if (!ctx.message.text) return;
@@ -13,11 +14,11 @@ export const txt2imgQuestion = new GrammyStatelessQ.StatelessQuestion<Context>(
   },
 );
 
-export async function txt2imgCommand(ctx: Grammy.CommandContext<Context>) {
+export async function txt2imgCommand(ctx: CommandContext<ErisContext>) {
   await txt2img(ctx, ctx.match, true);
 }
 
-async function txt2img(ctx: Context, match: string, includeRepliedTo: boolean): Promise<void> {
+async function txt2img(ctx: ErisContext, match: string, includeRepliedTo: boolean): Promise<void> {
   if (!ctx.message?.from?.id) {
     await ctx.reply("I don't know who you are");
     return;

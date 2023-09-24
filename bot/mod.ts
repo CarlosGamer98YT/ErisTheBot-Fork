@@ -1,52 +1,53 @@
-import { Grammy, GrammyAutoQuote, GrammyFiles, GrammyParseMode, Log } from "../deps.ts";
+import { Api, Bot, Context, RawApi, session, SessionFlavor } from "grammy";
+import { autoQuote } from "grammy_autoquote";
+import { FileFlavor, hydrateFiles } from "grammy_files";
+import { hydrateReply, ParseModeFlavor } from "grammy_parse_mode";
+import { getLogger } from "std/log";
+import { getConfig, setConfig } from "../app/config.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
+import { cancelCommand } from "./cancelCommand.ts";
+import { img2imgCommand, img2imgQuestion } from "./img2imgCommand.ts";
+import { pnginfoCommand, pnginfoQuestion } from "./pnginfoCommand.ts";
 import { queueCommand } from "./queueCommand.ts";
 import { txt2imgCommand, txt2imgQuestion } from "./txt2imgCommand.ts";
-import { pnginfoCommand, pnginfoQuestion } from "./pnginfoCommand.ts";
-import { img2imgCommand, img2imgQuestion } from "./img2imgCommand.ts";
-import { cancelCommand } from "./cancelCommand.ts";
-import { getConfig, setConfig } from "../app/config.ts";
 
-export const logger = () => Log.getLogger();
+export const logger = () => getLogger();
 
 interface SessionData {
-  chat: ChatData;
-  user: UserData;
+  chat: ErisChatData;
+  user: ErisUserData;
 }
 
-interface ChatData {
+interface ErisChatData {
   language?: string;
 }
 
-interface UserData {
+interface ErisUserData {
   params?: Record<string, string>;
 }
 
-export type Context =
-  & GrammyFiles.FileFlavor<GrammyParseMode.ParseModeFlavor<Grammy.Context>>
-  & Grammy.SessionFlavor<SessionData>;
+export type ErisContext =
+  & FileFlavor<ParseModeFlavor<Context>>
+  & SessionFlavor<SessionData>;
 
-type WithRetryApi<T extends Grammy.RawApi> = {
+type WithRetryApi<T extends RawApi> = {
   [M in keyof T]: T[M] extends (args: infer P, ...rest: infer A) => infer R
     ? (args: P extends object ? P & { maxAttempts?: number; maxWait?: number } : P, ...rest: A) => R
     : T[M];
 };
 
-type Api = Grammy.Api<WithRetryApi<Grammy.RawApi>>;
+type ErisApi = Api<WithRetryApi<RawApi>>;
 
-export const bot = new Grammy.Bot<Context, Api>(
+export const bot = new Bot<ErisContext, ErisApi>(
   Deno.env.get("TG_BOT_TOKEN")!,
   {
     client: { timeoutSeconds: 20 },
   },
 );
 
-bot.use(GrammyAutoQuote.autoQuote);
-bot.use(GrammyParseMode.hydrateReply);
-bot.use(Grammy.session<
-  SessionData,
-  Grammy.Context & Grammy.SessionFlavor<SessionData>
->({
+bot.use(autoQuote);
+bot.use(hydrateReply);
+bot.use(session<SessionData, ErisContext>({
   type: "multi",
   chat: {
     initial: () => ({}),
@@ -57,7 +58,7 @@ bot.use(Grammy.session<
   },
 }));
 
-bot.api.config.use(GrammyFiles.hydrateFiles(bot.token));
+bot.api.config.use(hydrateFiles(bot.token));
 
 // Automatically retry bot requests if we get a "too many requests" or telegram internal error
 bot.api.config.use(async (prev, method, payload, signal) => {
