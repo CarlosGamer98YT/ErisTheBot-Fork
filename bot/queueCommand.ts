@@ -7,7 +7,10 @@ import { ErisContext } from "./mod.ts";
 
 export async function queueCommand(ctx: CommandContext<ErisContext>) {
   let formattedMessage = await getMessageText();
-  const queueMessage = await ctx.replyFmt(formattedMessage, { disable_notification: true });
+  const queueMessage = await ctx.replyFmt(formattedMessage, {
+    disable_notification: true,
+    reply_to_message_id: ctx.message?.message_id,
+  });
   handleFutureUpdates().catch(() => undefined);
 
   async function getMessageText() {

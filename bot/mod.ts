@@ -1,10 +1,10 @@
 import { Api, Bot, Context, RawApi, session, SessionFlavor } from "grammy";
-import { autoQuote } from "grammy_autoquote";
 import { FileFlavor, hydrateFiles } from "grammy_files";
 import { hydrateReply, ParseModeFlavor } from "grammy_parse_mode";
 import { getLogger } from "std/log";
 import { getConfig, setConfig } from "../app/config.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
+import { broadcastCommand } from "./broadcastCommand.ts";
 import { cancelCommand } from "./cancelCommand.ts";
 import { img2imgCommand, img2imgQuestion } from "./img2imgCommand.ts";
 import { pnginfoCommand, pnginfoQuestion } from "./pnginfoCommand.ts";
@@ -45,7 +45,6 @@ export const bot = new Bot<ErisContext, ErisApi>(
   },
 );
 
-bot.use(autoQuote);
 bot.use(hydrateReply);
 bot.use(session<SessionData, ErisContext>({
   type: "multi",
@@ -128,6 +127,8 @@ bot.use(pnginfoQuestion.middleware());
 bot.command("queue", queueCommand);
 
 bot.command("cancel", cancelCommand);
+
+bot.command("broadcast", broadcastCommand);
 
 bot.command("pause", async (ctx) => {
   if (!ctx.from?.username) return;

@@ -23,7 +23,11 @@ async function pnginfo(ctx: ErisContext, includeRepliedTo: boolean): Promise<voi
     await ctx.reply(
       "Please send me a PNG file." +
         pnginfoQuestion.messageSuffixMarkdown(),
-      { reply_markup: { force_reply: true, selective: true }, parse_mode: "Markdown" },
+      {
+        reply_markup: { force_reply: true, selective: true },
+        parse_mode: "Markdown",
+        reply_to_message_id: ctx.message?.message_id,
+      },
     );
     return;
   }
@@ -43,7 +47,7 @@ async function pnginfo(ctx: ErisContext, includeRepliedTo: boolean): Promise<voi
   ]);
 
   await ctx.reply(paramsText.text, {
-    reply_to_message_id: ctx.message?.message_id,
     entities: paramsText.entities,
+    reply_to_message_id: ctx.message?.message_id,
   });
 }
