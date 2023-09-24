@@ -1,26 +1,13 @@
 import { GrammyTypes, IKV } from "../deps.ts";
-import { PngInfo } from "../sd/parsePngInfo.ts";
 import { db } from "./db.ts";
 
 export interface GenerationSchema {
-  task:
-    | {
-      type: "txt2img";
-      params: Partial<PngInfo>;
-    }
-    | {
-      type: "img2img";
-      params: Partial<PngInfo>;
-      fileId?: string;
-    };
   from: GrammyTypes.User;
   chat: GrammyTypes.Chat;
-  requestMessageId?: number;
-  status: {
-    info?: SdGenerationInfo;
-    startDate?: Date;
-    endDate?: Date;
-  };
+  sdInstanceId?: string;
+  info?: SdGenerationInfo;
+  startDate?: Date;
+  endDate?: Date;
 }
 
 /**
@@ -57,4 +44,18 @@ export interface SdGenerationInfo {
   is_using_inpainting_conditioning: boolean;
 }
 
-export const generationStore = new IKV.Store<GenerationSchema, {}>(db, "job", { indices: {} });
+type GenerationIndices = {
+  fromId: number;
+  chatId: number;
+};
+
+export const generationStore = new IKV.Store<GenerationSchema, GenerationIndices>(
+  db,
+  "generations",
+  {
+    indices: {
+      fromId: { getValue: (item) => item.from.id },
+      chatId: { getValue: (item) => item.chat.id },
+    },
+  },
+);

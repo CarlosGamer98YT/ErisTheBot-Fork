@@ -81,7 +81,7 @@ async function txt2img(ctx: Context, match: string, includeRepliedTo: boolean): 
     chat: ctx.message.chat,
     requestMessage: ctx.message,
     replyMessage: replyMessage,
-  });
+  }, { retryCount: 3, retryDelayMs: 10_000 });
 
-  logger().debug(`Job enqueued for ${formatUserChat(ctx.message)}`);
+  logger().debug(`Generation (txt2img) enqueued for ${formatUserChat(ctx.message)}`);
 }

@@ -28,7 +28,7 @@ export type Context =
 
 type WithRetryApi<T extends Grammy.RawApi> = {
   [M in keyof T]: T[M] extends (args: infer P, ...rest: infer A) => infer R
-    ? (args: P extends object ? P & { maxAttempts?: number } : P, ...rest: A) => R
+    ? (args: P extends object ? P & { maxAttempts?: number; maxWait?: number } : P, ...rest: A) => R
     : T[M];
 };
 
@@ -37,7 +37,7 @@ type Api = Grammy.Api<WithRetryApi<Grammy.RawApi>>;
 export const bot = new Grammy.Bot<Context, Api>(
   Deno.env.get("TG_BOT_TOKEN")!,
   {
-    client: { timeoutSeconds: 30 },
+    client: { timeoutSeconds: 20 },
   },
 );
 
@@ -62,22 +62,20 @@ bot.api.config.use(GrammyFiles.hydrateFiles(bot.token));
 // Automatically retry bot requests if we get a "too many requests" or telegram internal error
 bot.api.config.use(async (prev, method, payload, signal) => {
   const maxAttempts = payload && ("maxAttempts" in payload) ? payload.maxAttempts ?? 3 : 3;
+  const maxWait = payload && ("maxWait" in payload) ? payload.maxWait ?? 10 : 10;
   let attempt = 0;
   while (true) {
     attempt++;
     const result = await prev(method, payload, signal);
-    if (
-      result.ok ||
-      ![429, 500].includes(result.error_code) ||
-      attempt >= maxAttempts
-    ) {
-      return result;
-    }
+    if (result.ok) return result;
+    if (result.error_code !== 429) return result;
+    if (attempt >= maxAttempts) return result;
+    const retryAfter = result.parameters?.retry_after ?? (attempt * 5);
+    if (retryAfter > maxWait) return result;
     logger().warning(
       `${method} (attempt ${attempt}) failed: ${result.error_code} ${result.description}`,
     );
-    const retryAfterMs = (result.parameters?.retry_after ?? (attempt * 5)) * 1000;
-    await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
+    await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
   }
 });
 

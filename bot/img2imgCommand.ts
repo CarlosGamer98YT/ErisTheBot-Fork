@@ -107,7 +107,7 @@ async function img2img(
     chat: ctx.message.chat,
     requestMessage: ctx.message,
     replyMessage: replyMessage,
-  });
+  }, { retryCount: 3, repeatDelayMs: 10_000 });
 
-  logger().debug(`Job enqueued for ${formatUserChat(ctx.message)}`);
+  logger().debug(`Generation (img2img) enqueued for ${formatUserChat(ctx.message)}`);
 }

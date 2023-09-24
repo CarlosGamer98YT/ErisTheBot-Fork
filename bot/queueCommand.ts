@@ -1,5 +1,5 @@
 import { Grammy, GrammyParseMode } from "../deps.ts";
-import { Context, logger } from "./mod.ts";
+import { Context } from "./mod.ts";
 import { getFlagEmoji } from "../utils/getFlagEmoji.ts";
 import { activeGenerationWorkers, generationQueue } from "../app/generationQueue.ts";
 import { getConfig } from "../app/config.ts";
@@ -7,7 +7,7 @@ import { getConfig } from "../app/config.ts";
 export async function queueCommand(ctx: Grammy.CommandContext<Context>) {
   let formattedMessage = await getMessageText();
   const queueMessage = await ctx.replyFmt(formattedMessage, { disable_notification: true });
-  handleFutureUpdates().catch((err) => logger().warning(`Updating queue message failed: ${err}`));
+  handleFutureUpdates().catch(() => undefined);
 
   async function getMessageText() {
     const config = await getConfig();

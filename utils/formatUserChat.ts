@@ -1,6 +1,8 @@
 import { GrammyTypes } from "../deps.ts";
 
-export function formatUserChat(ctx: { from?: GrammyTypes.User; chat?: GrammyTypes.Chat }) {
+export function formatUserChat(
+  ctx: { from?: GrammyTypes.User; chat?: GrammyTypes.Chat; sdInstanceId?: string },
+) {
   const msg: string[] = [];
   if (ctx.from) {
     msg.push(ctx.from.first_name);
@@ -23,6 +25,9 @@ export function formatUserChat(ctx: { from?: GrammyTypes.User; chat?: GrammyType
         msg.push(`(@${ctx.chat.username})`);
       }
     }
+  }
+  if (ctx.sdInstanceId) {
+    msg.push(`using ${ctx.sdInstanceId}`);
   }
   return msg.join(" ");
 }

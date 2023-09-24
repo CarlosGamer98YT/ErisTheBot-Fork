@@ -1,8 +1,8 @@
-// Load environment variables from .env file
 import "https://deno.land/std@0.201.0/dotenv/load.ts";
-
-// Setup logging
 import { Log } from "./deps.ts";
+import { bot } from "./bot/mod.ts";
+import { runAllTasks } from "./app/mod.ts";
+
 Log.setup({
   handlers: {
     console: new Log.handlers.ConsoleHandler("DEBUG"),
@@ -12,9 +12,6 @@ Log.setup({
   },
 });
 
-// Main program logic
-import { bot } from "./bot/mod.ts";
-import { runAllTasks } from "./app/mod.ts";
 await Promise.all([
   bot.start(),
   runAllTasks(),
