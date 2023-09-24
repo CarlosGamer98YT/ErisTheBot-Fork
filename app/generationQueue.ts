@@ -136,7 +136,7 @@ async function processGenerationJob(
   await bot.api.editMessageText(
     state.replyMessage.chat.id,
     state.replyMessage.message_id,
-    `Generating your prompt now... 0% using ${sdInstance.name}`,
+    `Generating your prompt now... 0% using ${sdInstance.name || sdInstance.id}`,
     { maxAttempts: 1 },
   );
 
@@ -221,9 +221,9 @@ async function processGenerationJob(
     await bot.api.editMessageText(
       state.replyMessage.chat.id,
       state.replyMessage.message_id,
-      `Generating your prompt now... ${
-        (progressResponse.data.progress * 100).toFixed(0)
-      }% using ${sdInstance.name}`,
+      `Generating your prompt now... ${(progressResponse.data.progress * 100).toFixed(0)}% using ${
+        sdInstance.name || sdInstance.id
+      }`,
       { maxAttempts: 1 },
     ).catch(() => undefined);
 
