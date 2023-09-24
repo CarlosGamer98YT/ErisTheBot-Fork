@@ -25,9 +25,9 @@ You can put these in `.env` file or pass them as environment variables.
 
 ## Codegen
 
-The Stable Diffusion API in `common/sdApi.ts` is auto-generated. To regenerate it, first start your
-SD WebUI with `--nowebui --api`, and then run:
+The Stable Diffusion API in `sd/sdApi.ts` is auto-generated. To regenerate it, first start your SD
+WebUI with `--nowebui --api`, and then run:
 
 ```sh
-deno run npm:openapi-typescript http://localhost:7861/openapi.json -o common/sdApi.ts
+deno run npm:openapi-typescript http://localhost:7861/openapi.json -o sd/sdApi.ts
 ```
