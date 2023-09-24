@@ -7,10 +7,12 @@ import { parsePngInfo, PngInfo } from "../sd/parsePngInfo.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
 import { ErisContext, logger } from "./mod.ts";
 
+type QuestionState = { fileId?: string; params?: Partial<PngInfo> };
+
 export const img2imgQuestion = new StatelessQuestion<ErisContext>(
   "img2img",
-  async (ctx, state) => {
-    // todo: also save original image size in state
+  async (ctx, stateString) => {
+    const state: QuestionState = JSON.parse(stateString);
     await img2img(ctx, ctx.message.text, false, state);
   },
 );
@@ -23,7 +25,7 @@ async function img2img(
   ctx: ErisContext,
   match: string | undefined,
   includeRepliedTo: boolean,
-  fileId?: string,
+  state: QuestionState = {},
 ): Promise<void> {
   if (!ctx.message?.from?.id) {
     await ctx.reply("I don't know who you are");
@@ -53,49 +55,51 @@ async function img2img(
     return;
   }
 
-  let params: Partial<PngInfo> = {};
-
   const repliedToMsg = ctx.message.reply_to_message;
 
   if (includeRepliedTo && repliedToMsg?.photo) {
     const photos = repliedToMsg.photo;
     const biggestPhoto = maxBy(photos, (p) => p.width * p.height);
     if (!biggestPhoto) throw new Error("Message was a photo but had no photos?");
-    fileId = biggestPhoto.file_id;
-    params.width = biggestPhoto.width;
-    params.height = biggestPhoto.height;
+    state.fileId = biggestPhoto.file_id;
+    if (!state.params) state.params = {};
+    state.params.width = biggestPhoto.width;
+    state.params.height = biggestPhoto.height;
   }
 
   if (ctx.message.photo) {
     const photos = ctx.message.photo;
     const biggestPhoto = maxBy(photos, (p) => p.width * p.height);
     if (!biggestPhoto) throw new Error("Message was a photo but had no photos?");
-    fileId = biggestPhoto.file_id;
-    params.width = biggestPhoto.width;
-    params.height = biggestPhoto.height;
+    state.fileId = biggestPhoto.file_id;
+    if (!state.params) state.params = {};
+    state.params.width = biggestPhoto.width;
+    state.params.height = biggestPhoto.height;
   }
 
   const repliedToText = repliedToMsg?.text || repliedToMsg?.caption;
   if (includeRepliedTo && repliedToText) {
     // TODO: remove bot command from replied to text
-    params = parsePngInfo(repliedToText, params);
+    state.params = parsePngInfo(repliedToText, state.params);
   }
 
-  params = parsePngInfo(match ?? "", params);
+  if (match) {
+    state.params = parsePngInfo(match, state.params);
+  }
 
-  if (!fileId) {
+  if (!state.fileId) {
     await ctx.reply(
       "Please show me a picture to repaint." +
-        img2imgQuestion.messageSuffixMarkdown(),
+        img2imgQuestion.messageSuffixMarkdown(JSON.stringify(state satisfies QuestionState)),
       { reply_markup: { force_reply: true, selective: true }, parse_mode: "Markdown" },
     );
     return;
   }
 
-  if (!params.prompt) {
+  if (!state.params?.prompt) {
     await ctx.reply(
       "Please describe the picture you want to repaint." +
-        img2imgQuestion.messageSuffixMarkdown(fileId),
+        img2imgQuestion.messageSuffixMarkdown(JSON.stringify(state satisfies QuestionState)),
       { reply_markup: { force_reply: true, selective: true }, parse_mode: "Markdown" },
     );
     return;
@@ -104,7 +108,7 @@ async function img2img(
   const replyMessage = await ctx.reply("Accepted. You are now in queue.");
 
   await generationQueue.pushJob({
-    task: { type: "img2img", params, fileId },
+    task: { type: "img2img", fileId: state.fileId, params: state.params },
     from: ctx.message.from,
     chat: ctx.message.chat,
     requestMessage: ctx.message,
