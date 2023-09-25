@@ -138,7 +138,7 @@ async function processGenerationJob(
     state.replyMessage.message_id,
     `Generating your prompt now... 0% using ${sdInstance.name || sdInstance.id}`,
     { maxAttempts: 1 },
-  );
+  ).catch(() => undefined);
 
   // reduce size if worker can't handle the resolution
   const config = await getConfig();
