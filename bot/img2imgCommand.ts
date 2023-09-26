@@ -1,11 +1,11 @@
 import { CommandContext } from "grammy";
 import { StatelessQuestion } from "grammy_stateless_question";
-import { maxBy } from "std/collections";
+import { maxBy } from "std/collections/max_by.ts";
 import { getConfig } from "../app/config.ts";
 import { generationQueue } from "../app/generationQueue.ts";
-import { parsePngInfo, PngInfo } from "../sd/parsePngInfo.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
 import { ErisContext, logger } from "./mod.ts";
+import { parsePngInfo, PngInfo } from "./parsePngInfo.ts";
 
 type QuestionState = { fileId?: string; params?: Partial<PngInfo> };
 

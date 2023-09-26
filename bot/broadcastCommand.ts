@@ -1,10 +1,10 @@
 import { CommandContext } from "grammy";
 import { bold, fmt, FormattedString } from "grammy_parse_mode";
-import { distinctBy } from "std/collections";
+import { distinctBy } from "std/collections/distinct_by.ts";
 import { getConfig } from "../app/config.ts";
 import { generationStore } from "../app/generationStore.ts";
-import { ErisContext, logger } from "./mod.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
+import { ErisContext, logger } from "./mod.ts";
 
 export async function broadcastCommand(ctx: CommandContext<ErisContext>) {
   if (!ctx.from?.username) {

@@ -1,4 +1,4 @@
-import * as SdApi from "../sd/sdApi.ts";
+import * as SdApi from "./sdApi.ts";
 import { db } from "./db.ts";
 
 export interface ConfigData {

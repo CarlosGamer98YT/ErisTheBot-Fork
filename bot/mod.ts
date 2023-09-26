@@ -1,7 +1,7 @@
 import { Api, Bot, Context, RawApi, session, SessionFlavor } from "grammy";
 import { FileFlavor, hydrateFiles } from "grammy_files";
 import { hydrateReply, ParseModeFlavor } from "grammy_parse_mode";
-import { getLogger } from "std/log";
+import { getLogger } from "std/log/mod.ts";
 import { getConfig, setConfig } from "../app/config.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
 import { broadcastCommand } from "./broadcastCommand.ts";

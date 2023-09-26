@@ -2,9 +2,9 @@ import { CommandContext } from "grammy";
 import { StatelessQuestion } from "grammy_stateless_question";
 import { getConfig } from "../app/config.ts";
 import { generationQueue } from "../app/generationQueue.ts";
-import { getPngInfo, parsePngInfo, PngInfo } from "../sd/parsePngInfo.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
 import { ErisContext, logger } from "./mod.ts";
+import { getPngInfo, parsePngInfo, PngInfo } from "./parsePngInfo.ts";
 
 export const txt2imgQuestion = new StatelessQuestion<ErisContext>(
   "txt2img",

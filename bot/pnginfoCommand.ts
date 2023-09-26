@@ -1,8 +1,8 @@
 import { CommandContext } from "grammy";
 import { bold, fmt } from "grammy_parse_mode";
 import { StatelessQuestion } from "grammy_stateless_question";
-import { getPngInfo, parsePngInfo } from "../sd/parsePngInfo.ts";
 import { ErisContext } from "./mod.ts";
+import { getPngInfo, parsePngInfo } from "./parsePngInfo.ts";
 
 export const pnginfoQuestion = new StatelessQuestion<ErisContext>(
   "pnginfo",

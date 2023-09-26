@@ -2,20 +2,26 @@
   "tasks": {
     "start": "deno run --unstable --allow-env --allow-read --allow-write --allow-net main.ts"
   },
+  "compilerOptions": {
+    "jsx": "react"
+  },
   "fmt": {
     "lineWidth": 100
   },
   "imports": {
-    "std/log": "https://deno.land/std@0.201.0/log/mod.ts",
-    "std/async": "https://deno.land/std@0.201.0/async/mod.ts",
-    "std/fmt/duration": "https://deno.land/std@0.202.0/fmt/duration.ts",
-    "std/collections": "https://deno.land/std@0.202.0/collections/mod.ts",
-    "std/encoding/base64": "https://deno.land/std@0.202.0/encoding/base64.ts",
+    "std/dotenv/": "https://deno.land/std@0.201.0/dotenv/",
+    "std/log/": "https://deno.land/std@0.201.0/log/",
+    "std/async/": "https://deno.land/std@0.201.0/async/",
+    "std/fmt/": "https://deno.land/std@0.202.0/fmt/",
+    "std/collections/": "https://deno.land/std@0.202.0/collections/",
+    "std/encoding/": "https://deno.land/std@0.202.0/encoding/",
+    "std/http/": "https://deno.land/std@0.202.0/http/",
     "async": "https://deno.land/x/async@v2.0.2/mod.ts",
     "ulid": "https://deno.land/x/ulid@v0.3.0/mod.ts",
     "indexed_kv": "https://deno.land/x/indexed_kv@v0.4.0/mod.ts",
     "kvmq": "https://deno.land/x/kvmq@v0.2.0/mod.ts",
     "kvfs": "https://deno.land/x/kvfs@v0.1.0/mod.ts",
+    "swc": "https://deno.land/x/swc@0.2.1/mod.ts",
     "grammy": "https://lib.deno.dev/x/grammy@1/mod.ts",
     "grammy_types": "https://lib.deno.dev/x/grammy_types@3/mod.ts",
     "grammy_autoquote": "https://lib.deno.dev/x/grammy_autoquote@1/mod.ts",
@@ -25,6 +31,8 @@
     "file_type": "https://esm.sh/file-type@18.5.0",
     "png_chunks_extract": "https://esm.sh/png-chunks-extract@1.0.0",
     "png_chunk_text": "https://esm.sh/png-chunk-text@1.0.0",
-    "openapi_fetch": "https://esm.sh/openapi-fetch@0.7.6"
+    "openapi_fetch": "https://esm.sh/openapi-fetch@0.7.6",
+    "@trpc/server": "https://esm.sh/@trpc/server@10.38.4",
+    "@trpc/server/": "https://esm.sh/@trpc/server@10.38.4/"
   }
 }
