@@ -45,7 +45,8 @@ const languageToFlagMap: Record<string, string> = {
 };
 
 export function getFlagEmoji(languageCode?: string): string | undefined {
-  const language = languageCode?.split("-").pop()?.toLowerCase();
-  if (!language) return;
-  return languageToFlagMap[language];
+  if (!languageCode) return;
+  const language = languageCode.split("-").shift()?.toLowerCase();
+  if (language == null) return;
+  return languageToFlagMap[language] ?? `[${language.toUpperCase()}]`;
 }
