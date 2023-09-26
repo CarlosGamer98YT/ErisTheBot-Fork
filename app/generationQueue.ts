@@ -199,6 +199,10 @@ async function processGenerationJob(
     throw new Error(`Unknown task type: ${state.task.type}`);
   }
 
+  // we await the promise only after it finishes
+  // so we need to add catch callback to not crash the process before that
+  responsePromise.catch(() => undefined);
+
   // poll for progress while the generation request is pending
   do {
     const progressResponse = await workerSdClient.GET("/sdapi/v1/progress", {
