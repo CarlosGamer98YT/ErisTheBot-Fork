@@ -120,6 +120,7 @@ async function processGenerationJob(
     headers: { "Authorization": sdInstance.api.auth },
   });
   state.sdInstanceId = sdInstance.id;
+  state.progress = 0;
   logger().debug(`Generation started for ${formatUserChat(state)}`);
   await updateJob({ state: state });
 
@@ -204,6 +205,7 @@ async function processGenerationJob(
   responsePromise.catch(() => undefined);
 
   // poll for progress while the generation request is pending
+
   do {
     const progressResponse = await workerSdClient.GET("/sdapi/v1/progress", {
       params: {},
@@ -217,21 +219,22 @@ async function processGenerationJob(
       );
     }
 
-    state.progress = progressResponse.data.progress;
-    await updateJob({ state: state });
+    if (progressResponse.data.progress > state.progress) {
+      state.progress = progressResponse.data.progress;
+      await updateJob({ state: state });
+      await bot.api.sendChatAction(state.chat.id, "upload_photo", { maxAttempts: 1 })
+        .catch(() => undefined);
+      await bot.api.editMessageText(
+        state.replyMessage.chat.id,
+        state.replyMessage.message_id,
+        `Generating your prompt now... ${
+          (progressResponse.data.progress * 100).toFixed(0)
+        }% using ${sdInstance.name || sdInstance.id}`,
+        { maxAttempts: 1 },
+      ).catch(() => undefined);
+    }
 
-    await bot.api.sendChatAction(state.chat.id, "upload_photo", { maxAttempts: 1 })
-      .catch(() => undefined);
-    await bot.api.editMessageText(
-      state.replyMessage.chat.id,
-      state.replyMessage.message_id,
-      `Generating your prompt now... ${(progressResponse.data.progress * 100).toFixed(0)}% using ${
-        sdInstance.name || sdInstance.id
-      }`,
-      { maxAttempts: 1 },
-    ).catch(() => undefined);
-
-    await Promise.race([delay(3000), responsePromise]).catch(() => undefined);
+    await Promise.race([delay(1000), responsePromise]).catch(() => undefined);
   } while (await promiseState(responsePromise) === "pending");
 
   // check response
