@@ -39,6 +39,7 @@ export async function broadcastCommand(ctx: CommandContext<ErisContext>) {
 
   const replyMessage = await ctx.replyFmt(getMessage(), {
     reply_to_message_id: ctx.message?.message_id,
+    allow_sending_without_reply: true,
   });
 
   // send message to each user

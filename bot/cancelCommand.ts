@@ -9,5 +9,6 @@ export async function cancelCommand(ctx: ErisContext) {
   for (const job of userJobs) await generationQueue.deleteJob(job.id);
   await ctx.reply(`Cancelled ${userJobs.length} jobs`, {
     reply_to_message_id: ctx.message?.message_id,
+    allow_sending_without_reply: true,
   });
 }

@@ -44,9 +44,9 @@ export async function queueCommand(ctx: CommandContext<ErisContext>) {
         ])
         : ["Queue is empty.\n"],
       "\nActive workers:\n",
-      ...config.sdInstances.flatMap((sdInstance) => [
-        activeGenerationWorkers.get(sdInstance.id)?.isProcessing ? "✅ " : "☠️ ",
-        fmt`${bold(sdInstance.name || sdInstance.id)} `,
+      ...Object.entries(config.sdInstances).flatMap(([sdInstanceId, sdInstance]) => [
+        activeGenerationWorkers.get(sdInstanceId)?.isProcessing ? "✅ " : "☠️ ",
+        fmt`${bold(sdInstance.name || sdInstanceId)} `,
         `(max ${(sdInstance.maxResolution / 1000000).toFixed(1)} Mpx) `,
         "\n",
       ]),

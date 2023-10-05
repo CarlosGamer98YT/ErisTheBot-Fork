@@ -11,7 +11,7 @@ import { PngInfo } from "../bot/parsePngInfo.ts";
 import { formatOrdinal } from "../utils/formatOrdinal.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
 import { SdError } from "./SdError.ts";
-import { getConfig, SdInstanceData } from "./config.ts";
+import { getConfig } from "./config.ts";
 import { db, fs } from "./db.ts";
 import { SdGenerationInfo } from "./generationStore.ts";
 import * as SdApi from "./sdApi.ts";
@@ -49,15 +49,16 @@ export async function processGenerationQueue() {
   while (true) {
     const config = await getConfig();
 
-    for (const sdInstance of config.sdInstances) {
-      const activeWorker = activeGenerationWorkers.get(sdInstance.id);
-      if (activeWorker?.isProcessing) continue;
+    for (const [sdInstanceId, sdInstance] of Object.entries(config?.sdInstances ?? {})) {
+      const activeWorker = activeGenerationWorkers.get(sdInstanceId);
+      if (activeWorker?.isProcessing) {
+        continue;
+      }
 
       const workerSdClient = createOpenApiClient<SdApi.paths>({
         baseUrl: sdInstance.api.url,
         headers: { "Authorization": sdInstance.api.auth },
       });
-
       // check if worker is up
       const activeWorkerStatus = await workerSdClient.GET("/sdapi/v1/memory", {
         signal: AbortSignal.timeout(10_000),
@@ -69,7 +70,7 @@ export async function processGenerationQueue() {
           return response;
         })
         .catch((error) => {
-          logger().warning(`Worker ${sdInstance.id} is down: ${error}`);
+          logger().debug(`Worker ${sdInstanceId} is down: ${error}`);
         });
       if (!activeWorkerStatus?.data) {
         continue;
@@ -77,7 +78,7 @@ export async function processGenerationQueue() {
 
       // create worker
       const newWorker = generationQueue.createWorker(async ({ state }, updateJob) => {
-        await processGenerationJob(state, updateJob, sdInstance);
+        await processGenerationJob(state, updateJob, sdInstanceId);
       });
       newWorker.addEventListener("error", (e) => {
         logger().error(
@@ -94,13 +95,12 @@ export async function processGenerationQueue() {
             allow_sending_without_reply: true,
           },
         ).catch(() => undefined);
-        if (e.detail.error instanceof SdError) {
-          newWorker.stopProcessing();
-        }
+        newWorker.stopProcessing();
+        logger().info(`Stopped worker ${sdInstanceId}`);
       });
       newWorker.processJobs();
-      activeGenerationWorkers.set(sdInstance.id, newWorker);
-      logger().info(`Started worker ${sdInstance.id}`);
+      activeGenerationWorkers.set(sdInstanceId, newWorker);
+      logger().info(`Started worker ${sdInstanceId}`);
     }
     await delay(60_000);
   }
@@ -112,14 +112,19 @@ export async function processGenerationQueue() {
 async function processGenerationJob(
   state: GenerationJob,
   updateJob: (job: Partial<JobData<GenerationJob>>) => Promise<void>,
-  sdInstance: SdInstanceData,
+  sdInstanceId: string,
 ) {
   const startDate = new Date();
+  const config = await getConfig();
+  const sdInstance = config?.sdInstances?.[sdInstanceId];
+  if (!sdInstance) {
+    throw new Error(`Unknown sdInstanceId: ${sdInstanceId}`);
+  }
   const workerSdClient = createOpenApiClient<SdApi.paths>({
     baseUrl: sdInstance.api.url,
     headers: { "Authorization": sdInstance.api.auth },
   });
-  state.sdInstanceId = sdInstance.id;
+  state.sdInstanceId = sdInstanceId;
   state.progress = 0;
   logger().debug(`Generation started for ${formatUserChat(state)}`);
   await updateJob({ state: state });
@@ -137,12 +142,11 @@ async function processGenerationJob(
   await bot.api.editMessageText(
     state.replyMessage.chat.id,
     state.replyMessage.message_id,
-    `Generating your prompt now... 0% using ${sdInstance.name || sdInstance.id}`,
+    `Generating your prompt now... 0% using ${sdInstance.name || sdInstanceId}`,
     { maxAttempts: 1 },
   ).catch(() => undefined);
 
   // reduce size if worker can't handle the resolution
-  const config = await getConfig();
   const size = limitSize(
     { ...config.defaultParams, ...state.task.params },
     sdInstance.maxResolution,
@@ -229,7 +233,7 @@ async function processGenerationJob(
         state.replyMessage.message_id,
         `Generating your prompt now... ${
           (progressResponse.data.progress * 100).toFixed(0)
-        }% using ${sdInstance.name || sdInstance.id}`,
+        }% using ${sdInstance.name || sdInstanceId}`,
         { maxAttempts: 1 },
       ).catch(() => undefined);
     }
@@ -264,7 +268,7 @@ async function processGenerationJob(
     from: state.from,
     requestMessage: state.requestMessage,
     replyMessage: state.replyMessage,
-    sdInstanceId: sdInstance.id,
+    sdInstanceId: sdInstanceId,
     startDate,
     endDate: new Date(),
     imageKeys,

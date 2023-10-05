@@ -1,17 +1,17 @@
 import "std/dotenv/load.ts";
 import { ConsoleHandler } from "std/log/handlers.ts";
 import { setup } from "std/log/mod.ts";
-import { serveApi } from "./api/mod.ts";
+import { serveUi } from "./api/mod.ts";
 import { runAllTasks } from "./app/mod.ts";
 import { bot } from "./bot/mod.ts";
 
 // setup logging
 setup({
   handlers: {
-    console: new ConsoleHandler("DEBUG"),
+    console: new ConsoleHandler("INFO"),
   },
   loggers: {
-    default: { level: "DEBUG", handlers: ["console"] },
+    default: { level: "INFO", handlers: ["console"] },
   },
 });
 
@@ -19,5 +19,5 @@ setup({
 await Promise.all([
   bot.start(),
   runAllTasks(),
-  serveApi(),
+  serveUi(),
 ]);

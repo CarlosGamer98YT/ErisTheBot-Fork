@@ -20,7 +20,6 @@ export async function txt2imgCommand(ctx: CommandContext<ErisContext>) {
 
 async function txt2img(ctx: ErisContext, match: string, includeRepliedTo: boolean): Promise<void> {
   if (!ctx.message?.from?.id) {
-    await ctx.reply("I don't know who you are", { reply_to_message_id: ctx.message?.message_id });
     return;
   }
 
@@ -43,7 +42,7 @@ async function txt2img(ctx: ErisContext, match: string, includeRepliedTo: boolea
 
   const userJobs = jobs.filter((job) => job.state.from.id === ctx.message?.from?.id);
   if (userJobs.length >= config.maxUserJobs) {
-    await ctx.reply(`You already have ${config.maxUserJobs} jobs in queue. Try again later.`, {
+    await ctx.reply(`You already have ${userJobs.length} jobs in queue. Try again later.`, {
       reply_to_message_id: ctx.message?.message_id,
     });
     return;

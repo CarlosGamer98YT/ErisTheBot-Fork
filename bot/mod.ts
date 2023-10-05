@@ -10,6 +10,7 @@ import { img2imgCommand, img2imgQuestion } from "./img2imgCommand.ts";
 import { pnginfoCommand, pnginfoQuestion } from "./pnginfoCommand.ts";
 import { queueCommand } from "./queueCommand.ts";
 import { txt2imgCommand, txt2imgQuestion } from "./txt2imgCommand.ts";
+import { sessions } from "../api/sessionsRoute.ts";
 
 export const logger = () => getLogger();
 
@@ -93,6 +94,7 @@ bot.use(async (ctx, next) => {
     try {
       await ctx.reply(`Handling update failed: ${err}`, {
         reply_to_message_id: ctx.message?.message_id,
+        allow_sending_without_reply: true,
       });
     } catch {
       throw err;
@@ -113,7 +115,30 @@ bot.api.setMyCommands([
   { command: "cancel", description: "Cancel all your requests" },
 ]);
 
-bot.command("start", (ctx) => ctx.reply("Hello! Use the /txt2img command to generate an image"));
+bot.command("start", async (ctx) => {
+  if (ctx.match) {
+    const id = ctx.match.trim();
+    const session = sessions.get(id);
+    if (session == null) {
+      await ctx.reply("Login failed: Invalid session ID", {
+        reply_to_message_id: ctx.message?.message_id,
+      });
+      return;
+    }
+    session.userId = ctx.from?.id;
+    sessions.set(id, session);
+    logger().info(`User ${formatUserChat(ctx)} logged in`);
+    // TODO: show link to web ui
+    await ctx.reply("Login successful! You can now return to the WebUI.", {
+      reply_to_message_id: ctx.message?.message_id,
+    });
+    return;
+  }
+
+  await ctx.reply("Hello! Use the /txt2img command to generate an image", {
+    reply_to_message_id: ctx.message?.message_id,
+  });
+});
 
 bot.command("txt2img", txt2imgCommand);
 bot.use(txt2imgQuestion.middleware());
@@ -137,19 +162,19 @@ bot.command("pause", async (ctx) => {
   if (config.pausedReason != null) {
     return ctx.reply(`Already paused: ${config.pausedReason}`);
   }
-  config.pausedReason = ctx.match ?? "No reason given";
-  await setConfig(config);
+  await setConfig({
+    pausedReason: ctx.match || "No reason given",
+  });
   logger().warning(`Bot paused by ${ctx.from.first_name} because ${config.pausedReason}`);
   return ctx.reply("Paused");
 });
 
 bot.command("resume", async (ctx) => {
   if (!ctx.from?.username) return;
-  const config = await getConfig();
+  let config = await getConfig();
   if (!config.adminUsernames.includes(ctx.from.username)) return;
   if (config.pausedReason == null) return ctx.reply("Already running");
-  config.pausedReason = null;
-  await setConfig(config);
+  await setConfig({ pausedReason: null });
   logger().info(`Bot resumed by ${ctx.from.first_name}`);
   return ctx.reply("Resumed");
 });
