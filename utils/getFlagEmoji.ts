@@ -42,6 +42,7 @@ const languageToFlagMap: Record<string, string> = {
   "id": "🇮🇩", // indonesian - indonesia
   "is": "🇮🇸", // icelandic - iceland
   "lb": "🇱🇺", // luxembourgish - luxembourg
+  "ca": "🇪🇸", // catalan - spain
 };
 
 export function getFlagEmoji(languageCode?: string): string | undefined {
