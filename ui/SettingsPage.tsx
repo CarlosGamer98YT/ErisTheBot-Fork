@@ -1,23 +1,23 @@
 import { cx } from "@twind/core";
 import React, { ReactNode, useState } from "react";
 import useSWR from "swr";
-import { apiClient, handleResponse } from "./apiClient.tsx";
+import { fetchApi, handleResponse } from "./apiClient.tsx";
 
 export function SettingsPage(props: { sessionId: string }) {
   const { sessionId } = props;
   const session = useSWR(
-    ["sessions", "GET", { query: { sessionId } }] as const,
-    (args) => apiClient.fetch(...args).then(handleResponse),
+    sessionId ? ["sessions/{sessionId}", "GET", { params: { sessionId } }] as const : null,
+    (args) => fetchApi(...args).then(handleResponse),
   );
   const user = useSWR(
     session.data?.userId
-      ? ["users", "GET", { query: { userId: session.data.userId } }] as const
+      ? ["users/{userId}", "GET", { params: { userId: String(session.data.userId) } }] as const
       : null,
-    (args) => apiClient.fetch(...args).then(handleResponse),
+    (args) => fetchApi(...args).then(handleResponse),
   );
   const params = useSWR(
     ["settings/params", "GET", {}] as const,
-    (args) => apiClient.fetch(...args).then(handleResponse),
+    (args) => fetchApi(...args).then(handleResponse),
   );
   const [changedParams, setChangedParams] = useState<Partial<typeof params.data>>({});
   const [error, setError] = useState<string>();
@@ -28,10 +28,9 @@ export function SettingsPage(props: { sessionId: string }) {
       onSubmit={(e) => {
         e.preventDefault();
         params.mutate(() =>
-          apiClient.fetch("settings/params", "PATCH", {
+          fetchApi("settings/params", "PATCH", {
             query: { sessionId },
-            type: "application/json",
-            body: changedParams ?? {},
+            body: { type: "application/json", data: changedParams ?? {} },
           }).then(handleResponse)
         )
           .then(() => setChangedParams({}))

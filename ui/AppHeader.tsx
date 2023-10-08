@@ -2,7 +2,7 @@ import { cx } from "@twind/core";
 import React, { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import useSWR from "swr";
-import { apiClient, handleResponse } from "./apiClient.tsx";
+import { fetchApi, handleResponse } from "./apiClient.tsx";
 
 function NavTab(props: { to: string; children: ReactNode }) {
   return (
@@ -21,16 +21,16 @@ export function AppHeader(
   const { className, sessionId, onLogOut } = props;
 
   const session = useSWR(
-    sessionId ? ["sessions", "GET", { query: { sessionId } }] as const : null,
-    (args) => apiClient.fetch(...args).then(handleResponse),
+    sessionId ? ["sessions/{sessionId}", "GET", { params: { sessionId } }] as const : null,
+    (args) => fetchApi(...args).then(handleResponse),
     { onError: () => onLogOut() },
   );
 
   const user = useSWR(
     session.data?.userId
-      ? ["users", "GET", { query: { userId: session.data.userId } }] as const
+      ? ["users/{userId}", "GET", { params: { userId: String(session.data.userId) } }] as const
       : null,
-    (args) => apiClient.fetch(...args).then(handleResponse),
+    (args) => fetchApi(...args).then(handleResponse),
   );
 
   return (

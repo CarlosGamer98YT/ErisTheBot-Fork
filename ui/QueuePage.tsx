@@ -3,12 +3,12 @@ import FlipMove from "react-flip-move";
 import useSWR from "swr";
 import { getFlagEmoji } from "../utils/getFlagEmoji.ts";
 import { Progress } from "./Progress.tsx";
-import { apiClient, handleResponse } from "./apiClient.tsx";
+import { fetchApi, handleResponse } from "./apiClient.tsx";
 
 export function QueuePage() {
   const jobs = useSWR(
     ["jobs", "GET", {}] as const,
-    (args) => apiClient.fetch(...args).then(handleResponse),
+    (args) => fetchApi(...args).then(handleResponse),
     { refreshInterval: 2000 },
   );
 

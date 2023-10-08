@@ -1,12 +1,15 @@
-import { Client } from "t_rest/client";
-import { ApiResponse } from "t_rest/server";
-import { ErisApi } from "../api/api.ts";
+import { createFetcher, Output } from "t_rest/client";
+import { ApiHandler } from "../api/serveApi.ts";
 
-export const apiClient = new Client<ErisApi>(`${location.origin}/api/`);
+export const fetchApi = createFetcher<ApiHandler>({
+  baseUrl: `${location.origin}/api/`,
+});
 
-export function handleResponse<T extends ApiResponse>(response: T): (T & { status: 200 })["body"] {
+export function handleResponse<T extends Output>(
+  response: T,
+): (T & { status: 200 })["body"]["data"] {
   if (response.status !== 200) {
-    throw new Error(String(response.body));
+    throw new Error(String(response.body.data));
   }
-  return response.body;
+  return response.body.data;
 }

@@ -4,7 +4,7 @@ import useLocalStorage from "use-local-storage";
 import { AppHeader } from "./AppHeader.tsx";
 import { QueuePage } from "./QueuePage.tsx";
 import { SettingsPage } from "./SettingsPage.tsx";
-import { apiClient, handleResponse } from "./apiClient.tsx";
+import { fetchApi, handleResponse } from "./apiClient.tsx";
 
 export function App() {
   // store session ID in the local storage
@@ -13,7 +13,7 @@ export function App() {
   // initialize a new session when there is no session ID
   useEffect(() => {
     if (!sessionId) {
-      apiClient.fetch("sessions", "POST", {}).then(handleResponse).then((session) => {
+      fetchApi("sessions", "POST", {}).then(handleResponse).then((session) => {
         console.log("Initialized session", session.id);
         setSessionId(session.id);
       });

@@ -1,13 +1,15 @@
-import { Endpoint, Route } from "t_rest/server";
+import { createEndpoint, createMethodFilter } from "t_rest/server";
 import { generationQueue } from "../app/generationQueue.ts";
 
-export const jobsRoute = {
-  GET: new Endpoint(
+export const jobsRoute = createMethodFilter({
+  GET: createEndpoint(
     { query: null, body: null },
     async () => ({
       status: 200,
-      type: "application/json",
-      body: await generationQueue.getAllJobs(),
+      body: {
+        type: "application/json",
+        data: await generationQueue.getAllJobs(),
+      },
     }),
   ),
-} satisfies Route;
+});
