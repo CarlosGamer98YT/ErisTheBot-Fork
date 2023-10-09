@@ -9,6 +9,7 @@ import { bot } from "../bot/mod.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
 import { db, fs } from "./db.ts";
 import { generationStore, SdGenerationInfo } from "./generationStore.ts";
+import { liveGlobalStats } from "./globalStatsStore.ts";
 
 const logger = () => getLogger();
 
@@ -108,6 +109,15 @@ export async function processUploadQueue() {
       endDate: new Date(),
       info: state.info,
     });
+
+    // update live stats
+    {
+      liveGlobalStats.imageCount++;
+      liveGlobalStats.pixelCount += state.info.width * state.info.height;
+      const userIdSet = new Set(liveGlobalStats.userIds);
+      userIdSet.add(state.from.id);
+      liveGlobalStats.userIds = [...userIdSet];
+    }
 
     // delete the status message
     await bot.api.deleteMessage(state.replyMessage.chat.id, state.replyMessage.message_id)

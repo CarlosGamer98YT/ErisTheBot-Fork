@@ -14,7 +14,7 @@ export async function serveUi() {
           aliasMap: {
             "/utils/*": "../utils/",
           },
-          quiet: true,
+          log: (_request, response) => response.status >= 400,
         }),
     }));
 
