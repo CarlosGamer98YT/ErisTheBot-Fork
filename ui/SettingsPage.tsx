@@ -56,6 +56,23 @@ export function SettingsPage(props: { sessionId: string }) {
       </label>
       <label className="flex flex-col items-stretch gap-1">
         <span className="text-sm">
+          Sampler {changedParams?.sampler_name != null ? "(Changed)" : ""}
+        </span>
+        <input
+          className="input-text"
+          disabled={params.isLoading || !user.data?.isAdmin}
+          value={changedParams?.sampler_name ??
+            params.data?.sampler_name ??
+            ""}
+          onChange={(e) =>
+            setChangedParams((params) => ({
+              ...params,
+              sampler_name: e.target.value,
+            }))}
+        />
+      </label>
+      <label className="flex flex-col items-stretch gap-1">
+        <span className="text-sm">
           Steps {changedParams?.steps != null ? "(Changed)" : ""}
         </span>
         <span className="flex items-center gap-1">
@@ -92,6 +109,7 @@ export function SettingsPage(props: { sessionId: string }) {
               }))}
           />
         </span>
+        span
       </label>
       <label className="flex flex-col items-stretch gap-1">
         <span className="text-sm">
