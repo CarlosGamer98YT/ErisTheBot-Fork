@@ -14,13 +14,13 @@ export const userStatsSchema = {
     userId: { type: "number" },
     imageCount: { type: "number" },
     pixelCount: { type: "number" },
-    tagsCount: {
+    tagCountMap: {
       type: "object",
       additionalProperties: { type: "number" },
     },
     timestamp: { type: "number" },
   },
-  required: ["userId", "imageCount", "pixelCount", "tagsCount", "timestamp"],
+  required: ["userId", "imageCount", "pixelCount", "tagCountMap", "timestamp"],
 } as const satisfies JsonSchema;
 
 export type UserStats = jsonType<typeof userStatsSchema>;
@@ -49,7 +49,7 @@ export const getUserStats = kvMemoize(
   async (userId: number): Promise<UserStats> => {
     let imageCount = 0;
     let pixelCount = 0;
-    const tagsCount: Record<string, number> = {};
+    const tagCountMap: Record<string, number> = {};
 
     logger().info(`Calculating user stats for ${userId}`);
 
@@ -58,15 +58,27 @@ export const getUserStats = kvMemoize(
     ) {
       imageCount++;
       pixelCount += (generation.value.info?.width ?? 0) * (generation.value.info?.height ?? 0);
-      const tags = generation.value.info?.prompt.split(/[,;.\n]/)
+
+      const tags = generation.value.info?.prompt
+        // split on punctuation and newlines
+        .split(/[,;.]\s+|\n/)
+        // remove `:weight` syntax
+        .map((tag) => tag.replace(/:[\d\.]+/g, " "))
+        // remove `(tag)` and `[tag]` syntax
+        .map((tag) => tag.replace(/[()[\]]/g, " "))
+        // collapse multiple whitespace to one
+        .map((tag) => tag.replace(/\s+/g, " "))
+        // trim whitespace
         .map((tag) => tag.trim())
+        // remove empty tags
         .filter((tag) => tag.length > 0)
-        .map((tag) => tag.toLowerCase())
-        .map((tag) => tag.replace(/[()[\]]/, ""))
-        .map((tag) => tag.replace(/:[\d.]/g, ""))
-        .map((tag) => tag.replace(/ +/g, " ")) ?? [];
+        // lowercase tags
+        .map((tag) => tag.toLowerCase()) ??
+        // default to empty array
+        [];
+
       for (const tag of tags) {
-        tagsCount[tag] = (tagsCount[tag] ?? 0) + 1;
+        tagCountMap[tag] = (tagCountMap[tag] ?? 0) + 1;
       }
     }
 
@@ -74,7 +86,7 @@ export const getUserStats = kvMemoize(
       userId,
       imageCount,
       pixelCount,
-      tagsCount,
+      tagCountMap,
       timestamp: Date.now(),
     };
   },

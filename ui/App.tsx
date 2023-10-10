@@ -5,6 +5,7 @@ import { AppHeader } from "./AppHeader.tsx";
 import { QueuePage } from "./QueuePage.tsx";
 import { SettingsPage } from "./SettingsPage.tsx";
 import { fetchApi, handleResponse } from "./apiClient.tsx";
+import { HomePage } from "./HomePage.tsx";
 
 export function App() {
   // store session ID in the local storage
@@ -36,8 +37,4 @@ export function App() {
       </div>
     </>
   );
-}
-
-function HomePage() {
-  return <h1>hi</h1>;
 }

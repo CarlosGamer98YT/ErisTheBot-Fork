@@ -36,9 +36,9 @@
     "png_chunks_extract": "https://esm.sh/png-chunks-extract@1.0.0",
     "png_chunk_text": "https://esm.sh/png-chunk-text@1.0.0",
     "openapi_fetch": "https://esm.sh/openapi-fetch@0.7.6",
-    "t_rest/server": "https://esm.sh/ty-rest@0.3.2/server?dev",
+    "t_rest/server": "https://esm.sh/ty-rest@0.4.0/server?dev",
 
-    "t_rest/client": "https://esm.sh/ty-rest@0.3.2/client?dev",
+    "t_rest/client": "https://esm.sh/ty-rest@0.4.0/client?dev",
     "react": "https://esm.sh/react@18.2.0?dev",
     "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?dev",
     "react-router-dom": "https://esm.sh/react-router-dom@6.16.0?dev",

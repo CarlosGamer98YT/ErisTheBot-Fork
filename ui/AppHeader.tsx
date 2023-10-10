@@ -33,6 +33,15 @@ export function AppHeader(
     (args) => fetchApi(...args).then(handleResponse),
   );
 
+  const userPhoto = useSWR(
+    session.data?.userId
+      ? ["users/{userId}/photo", "GET", {
+        params: { userId: String(session.data.userId) },
+      }] as const
+      : null,
+    (args) => fetchApi(...args).then(handleResponse).then((blob) => URL.createObjectURL(blob)),
+  );
+
   return (
     <header
       className={cx(
@@ -61,10 +70,10 @@ export function AppHeader(
 
       {/* user avatar */}
       {user.data
-        ? user.data.photoData
+        ? userPhoto.data
           ? (
             <img
-              src={`data:image/jpeg;base64,${user.data.photoData}`}
+              src={userPhoto.data}
               alt="avatar"
               className="w-9 h-9 rounded-full"
             />
