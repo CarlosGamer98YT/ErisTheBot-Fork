@@ -109,7 +109,6 @@ export function SettingsPage(props: { sessionId: string }) {
               }))}
           />
         </span>
-        span
       </label>
       <label className="flex flex-col items-stretch gap-1">
         <span className="text-sm">
