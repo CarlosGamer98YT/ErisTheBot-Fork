@@ -4,6 +4,7 @@ import { paramsRoute } from "./paramsRoute.ts";
 import { sessionsRoute } from "./sessionsRoute.ts";
 import { statsRoute } from "./statsRoute.ts";
 import { usersRoute } from "./usersRoute.ts";
+import { workersRoute } from "./workersRoute.ts";
 
 export const serveApi = createLoggerMiddleware(
   createPathFilter({
@@ -12,6 +13,7 @@ export const serveApi = createLoggerMiddleware(
     "users": usersRoute,
     "settings/params": paramsRoute,
     "stats": statsRoute,
+    "workers": workersRoute,
   }),
   { filterStatus: (status) => status >= 400 },
 );
