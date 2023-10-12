@@ -50,12 +50,18 @@ export async function getConfig(): Promise<Config> {
   const configEntry = await db.get<Config>(["config"]);
   const config = configEntry?.value;
   return {
-    adminUsernames: config?.adminUsernames ?? [],
+    adminUsernames: config?.adminUsernames ?? Deno.env.get("TG_ADMIN_USERNAMES")?.split(",") ?? [],
     pausedReason: config?.pausedReason ?? null,
     maxUserJobs: config?.maxUserJobs ?? Infinity,
     maxJobs: config?.maxJobs ?? Infinity,
     defaultParams: config?.defaultParams ?? {},
-    sdInstances: config?.sdInstances ?? {},
+    sdInstances: config?.sdInstances ??
+      {
+        "local": {
+          api: { url: Deno.env.get("SD_API_URL") ?? "http://127.0.0.1:7860/" },
+          maxResolution: 1024 * 1024,
+        },
+      },
   };
 }
 
