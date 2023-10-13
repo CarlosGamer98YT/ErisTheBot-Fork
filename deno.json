@@ -25,6 +25,7 @@
     "serve_spa": "https://deno.land/x/serve_spa@v0.2.0/mod.ts",
     "reroute": "https://deno.land/x/reroute@v0.1.0/mod.ts",
     "grammy": "https://lib.deno.dev/x/grammy@1/mod.ts",
+    "grammy_runner": "https://lib.deno.dev/x/grammy_runner@2/mod.ts",
     "grammy_types": "https://lib.deno.dev/x/grammy_types@3/mod.ts",
     "grammy_autoquote": "https://lib.deno.dev/x/grammy_autoquote@1/mod.ts",
     "grammy_parse_mode": "https://lib.deno.dev/x/grammy_parse_mode@1/mod.ts",

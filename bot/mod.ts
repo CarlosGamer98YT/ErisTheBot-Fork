@@ -1,7 +1,9 @@
 import { Api, Bot, Context, RawApi, session, SessionFlavor } from "grammy";
 import { FileFlavor, hydrateFiles } from "grammy_files";
 import { hydrateReply, ParseModeFlavor } from "grammy_parse_mode";
+import { run, sequentialize } from "grammy_runner";
 import { getLogger } from "std/log/mod.ts";
+import { sessions } from "../api/sessionsRoute.ts";
 import { getConfig, setConfig } from "../app/config.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
 import { broadcastCommand } from "./broadcastCommand.ts";
@@ -10,7 +12,6 @@ import { img2imgCommand, img2imgQuestion } from "./img2imgCommand.ts";
 import { pnginfoCommand, pnginfoQuestion } from "./pnginfoCommand.ts";
 import { queueCommand } from "./queueCommand.ts";
 import { txt2imgCommand, txt2imgQuestion } from "./txt2imgCommand.ts";
-import { sessions } from "../api/sessionsRoute.ts";
 
 export const logger = () => getLogger();
 
@@ -47,6 +48,9 @@ export const bot = new Bot<ErisContext, ErisApi>(
 );
 
 bot.use(hydrateReply);
+
+bot.use(sequentialize((ctx) => ctx.chat?.id.toString()));
+
 bot.use(session<SessionData, ErisContext>({
   type: "multi",
   chat: {
@@ -171,7 +175,7 @@ bot.command("pause", async (ctx) => {
 
 bot.command("resume", async (ctx) => {
   if (!ctx.from?.username) return;
-  let config = await getConfig();
+  const config = await getConfig();
   if (!config.adminUsernames.includes(ctx.from.username)) return;
   if (config.pausedReason == null) return ctx.reply("Already running");
   await setConfig({ pausedReason: null });
@@ -182,3 +186,8 @@ bot.command("resume", async (ctx) => {
 bot.command("crash", () => {
   throw new Error("Crash command used");
 });
+
+export async function runBot() {
+  const runner = run(bot);
+  await runner.task();
+}

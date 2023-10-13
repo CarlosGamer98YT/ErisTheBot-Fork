@@ -3,7 +3,7 @@ import { ConsoleHandler } from "std/log/handlers.ts";
 import { setup } from "std/log/mod.ts";
 import { serveUi } from "./api/mod.ts";
 import { runAllTasks } from "./app/mod.ts";
-import { bot } from "./bot/mod.ts";
+import { runBot } from "./bot/mod.ts";
 
 // setup logging
 setup({
@@ -17,7 +17,7 @@ setup({
 
 // run parts of the app
 await Promise.all([
-  bot.start(),
+  runBot(),
   runAllTasks(),
   serveUi(),
 ]);
