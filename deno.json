@@ -16,6 +16,7 @@
     "std/fmt/": "https://deno.land/std@0.202.0/fmt/",
     "std/collections/": "https://deno.land/std@0.202.0/collections/",
     "std/encoding/": "https://deno.land/std@0.202.0/encoding/",
+    "std/path/": "https://deno.land/std@0.204.0/path/",
 
     "async": "https://deno.land/x/async@v2.0.2/mod.ts",
     "ulid": "https://deno.land/x/ulid@v0.3.0/mod.ts",
