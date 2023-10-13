@@ -1,3 +1,4 @@
+/// <reference lib="deno.unstable" />
 /// <reference lib="dom" />
 import { createRoot } from "react-dom/client";
 import React from "react";

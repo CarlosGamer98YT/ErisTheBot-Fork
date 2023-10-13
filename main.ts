@@ -1,3 +1,4 @@
+/// <reference lib="deno.unstable" />
 import "std/dotenv/load.ts";
 import { ConsoleHandler } from "std/log/handlers.ts";
 import { setup } from "std/log/mod.ts";
