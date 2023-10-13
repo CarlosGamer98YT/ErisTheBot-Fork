@@ -33,6 +33,10 @@ export function AppHeader(
     (args) => fetchApi(...args).then(handleResponse),
   );
 
+  const bot = useSWR(
+    ['bot',"GET",{}] as const, (args) => fetchApi(...args).then(handleResponse),
+  );
+
   const userPhoto = useSWR(
     session.data?.userId
       ? ["users/{userId}/photo", "GET", {
@@ -89,7 +93,7 @@ export function AppHeader(
         : null}
 
       {/* login/logout button */}
-      {!session.isLoading && !user.isLoading && sessionId
+      {!session.isLoading && !user.isLoading && bot.data && sessionId
         ? (
           user.data
             ? (
@@ -100,7 +104,7 @@ export function AppHeader(
             : (
               <a
                 className="button-filled"
-                href={`https://t.me/ErisTheBot?start=${sessionId}`}
+                href={`https://t.me/${bot.data.username}?start=${sessionId}`}
                 target="_blank"
               >
                 Login
