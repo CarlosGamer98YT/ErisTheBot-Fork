@@ -1,7 +1,7 @@
 import { Chat, User } from "grammy_types";
 
 export function formatUserChat(
-  ctx: { from?: User; chat?: Chat; sdInstanceId?: string },
+  ctx: { from?: User; chat?: Chat; workerInstanceKey?: string },
 ) {
   const msg: string[] = [];
   if (ctx.from) {
@@ -26,8 +26,8 @@ export function formatUserChat(
       }
     }
   }
-  if (ctx.sdInstanceId) {
-    msg.push(`using ${ctx.sdInstanceId}`);
+  if (ctx.workerInstanceKey) {
+    msg.push(`using ${ctx.workerInstanceKey}`);
   }
   return msg.join(" ");
 }

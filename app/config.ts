@@ -21,27 +21,8 @@ export const configSchema = {
         negative_prompt: { type: "string" },
       },
     },
-    sdInstances: {
-      type: "object",
-      additionalProperties: {
-        type: "object",
-        properties: {
-          name: { type: "string" },
-          api: {
-            type: "object",
-            properties: {
-              url: { type: "string" },
-              auth: { type: "string" },
-            },
-            required: ["url"],
-          },
-          maxResolution: { type: "number" },
-        },
-        required: ["api", "maxResolution"],
-      },
-    },
   },
-  required: ["adminUsernames", "maxUserJobs", "maxJobs", "defaultParams", "sdInstances"],
+  required: ["adminUsernames", "maxUserJobs", "maxJobs", "defaultParams"],
 } as const satisfies JsonSchema;
 
 export type Config = jsonType<typeof configSchema>;
@@ -55,13 +36,6 @@ export async function getConfig(): Promise<Config> {
     maxUserJobs: config?.maxUserJobs ?? Infinity,
     maxJobs: config?.maxJobs ?? Infinity,
     defaultParams: config?.defaultParams ?? {},
-    sdInstances: config?.sdInstances ??
-      {
-        "local": {
-          api: { url: Deno.env.get("SD_API_URL") ?? "http://127.0.0.1:7860/" },
-          maxResolution: 1024 * 1024,
-        },
-      },
   };
 }
 
@@ -73,7 +47,6 @@ export async function setConfig(newConfig: Partial<Config>): Promise<void> {
     maxUserJobs: newConfig.maxUserJobs ?? oldConfig.maxUserJobs,
     maxJobs: newConfig.maxJobs ?? oldConfig.maxJobs,
     defaultParams: newConfig.defaultParams ?? oldConfig.defaultParams,
-    sdInstances: newConfig.sdInstances ?? oldConfig.sdInstances,
   };
   await db.set(["config"], config);
 }

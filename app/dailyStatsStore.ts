@@ -13,10 +13,12 @@ export const dailyStatsSchema = {
   properties: {
     userIds: { type: "array", items: { type: "number" } },
     imageCount: { type: "number" },
+    stepCount: { type: "number" },
     pixelCount: { type: "number" },
+    pixelStepCount: { type: "number" },
     timestamp: { type: "number" },
   },
-  required: ["userIds", "imageCount", "pixelCount", "timestamp"],
+  required: ["userIds", "imageCount", "stepCount", "pixelCount", "pixelStepCount", "timestamp"],
 } as const satisfies JsonSchema;
 
 export type DailyStats = jsonType<typeof dailyStatsSchema>;
@@ -27,7 +29,9 @@ export const getDailyStats = kvMemoize(
   async (year: number, month: number, day: number): Promise<DailyStats> => {
     const userIdSet = new Set<number>();
     let imageCount = 0;
+    let stepCount = 0;
     let pixelCount = 0;
+    let pixelStepCount = 0;
 
     const after = new Date(Date.UTC(year, month - 1, day));
     const before = new Date(Date.UTC(year, month - 1, day + 1));
@@ -39,13 +43,19 @@ export const getDailyStats = kvMemoize(
     ) {
       userIdSet.add(generation.value.from.id);
       imageCount++;
+      stepCount += generation.value.info?.steps ?? 0;
       pixelCount += (generation.value.info?.width ?? 0) * (generation.value.info?.height ?? 0);
+      pixelStepCount += (generation.value.info?.width ?? 0) *
+        (generation.value.info?.height ?? 0) *
+        (generation.value.info?.steps ?? 0);
     }
 
     return {
       userIds: [...userIdSet],
       imageCount,
+      stepCount,
       pixelCount,
+      pixelStepCount,
       timestamp: Date.now(),
     };
   },

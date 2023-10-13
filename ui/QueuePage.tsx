@@ -41,7 +41,7 @@ export function QueuePage() {
               <Progress className="w-full h-full" value={job.state.progress} />}
           </span>
           <span className="text-sm text-zinc-500 dark:text-zinc-400">
-            {job.state.sdInstanceId}
+            {job.state.workerInstanceKey}
           </span>
         </li>
       ))}

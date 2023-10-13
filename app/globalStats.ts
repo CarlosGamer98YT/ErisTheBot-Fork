@@ -9,17 +9,19 @@ export const globalStatsSchema = {
   properties: {
     userIds: { type: "array", items: { type: "number" } },
     imageCount: { type: "number" },
+    stepCount: { type: "number" },
     pixelCount: { type: "number" },
+    pixelStepCount: { type: "number" },
     timestamp: { type: "number" },
   },
-  required: ["userIds", "imageCount", "pixelCount", "timestamp"],
+  required: ["userIds", "imageCount", "stepCount", "pixelCount", "pixelStepCount", "timestamp"],
 } as const satisfies JsonSchema;
 
 export type GlobalStats = jsonType<typeof globalStatsSchema>;
 
-export const liveGlobalStats: GlobalStats = await getGlobalStats();
+export const globalStats: GlobalStats = await getGlobalStats();
 
-export async function getGlobalStats(): Promise<GlobalStats> {
+async function getGlobalStats(): Promise<GlobalStats> {
   // find the year/month/day of the first generation
   const startDate = await generationStore.getAll({}, { limit: 1 })
     .then((generations) => generations[0]?.id)
@@ -28,7 +30,9 @@ export async function getGlobalStats(): Promise<GlobalStats> {
   // iterate to today and sum up stats
   const userIdSet = new Set<number>();
   let imageCount = 0;
+  let stepCount = 0;
   let pixelCount = 0;
+  let pixelStepCount = 0;
 
   const tomorrow = addDays(new Date(), 1);
 
@@ -44,13 +48,17 @@ export async function getGlobalStats(): Promise<GlobalStats> {
     );
     for (const userId of dailyStats.userIds) userIdSet.add(userId);
     imageCount += dailyStats.imageCount;
+    stepCount += dailyStats.stepCount;
     pixelCount += dailyStats.pixelCount;
+    pixelStepCount += dailyStats.pixelStepCount;
   }
 
   return {
     userIds: [...userIdSet],
     imageCount,
+    stepCount,
     pixelCount,
+    pixelStepCount,
     timestamp: Date.now(),
   };
 }

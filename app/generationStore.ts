@@ -5,7 +5,7 @@ import { db } from "./db.ts";
 export interface GenerationSchema {
   from: User;
   chat: Chat;
-  sdInstanceId?: string;
+  sdInstanceId?: string; // TODO: change to workerInstanceKey
   info?: SdGenerationInfo;
   startDate?: Date;
   endDate?: Date;
@@ -48,6 +48,7 @@ export interface SdGenerationInfo {
 type GenerationIndices = {
   fromId: number;
   chatId: number;
+  workerInstanceKey: string;
 };
 
 export const generationStore = new Store<GenerationSchema, GenerationIndices>(
@@ -57,6 +58,7 @@ export const generationStore = new Store<GenerationSchema, GenerationIndices>(
     indices: {
       fromId: { getValue: (item) => item.from.id },
       chatId: { getValue: (item) => item.chat.id },
+      workerInstanceKey: { getValue: (item) => item.sdInstanceId ?? "" },
     },
   },
 );

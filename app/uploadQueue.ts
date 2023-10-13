@@ -9,7 +9,7 @@ import { bot } from "../bot/mod.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
 import { db, fs } from "./db.ts";
 import { generationStore, SdGenerationInfo } from "./generationStore.ts";
-import { liveGlobalStats } from "./globalStatsStore.ts";
+import { globalStats } from "./globalStats.ts";
 
 const logger = () => getLogger();
 
@@ -18,7 +18,7 @@ interface UploadJob {
   chat: Chat;
   requestMessage: Message;
   replyMessage: Message;
-  sdInstanceId: string;
+  workerInstanceKey?: string;
   startDate: Date;
   endDate: Date;
   imageKeys: Deno.KvKey[];
@@ -56,7 +56,7 @@ export async function processUploadQueue() {
           fmt`${bold("CFG scale:")} ${state.info.cfg_scale}, `,
           fmt`${bold("Seed:")} ${state.info.seed}, `,
           fmt`${bold("Size")}: ${state.info.width}x${state.info.height}, `,
-          fmt`${bold("Worker")}: ${state.sdInstanceId}, `,
+          state.workerInstanceKey ? fmt`${bold("Worker")}: ${state.workerInstanceKey}, ` : "",
           fmt`${bold("Time taken")}: ${format(jobDurationMs, { ignoreZero: true })}`,
         ]
         : [],
@@ -104,7 +104,7 @@ export async function processUploadQueue() {
     await generationStore.create({
       from: state.from,
       chat: state.chat,
-      sdInstanceId: state.sdInstanceId,
+      sdInstanceId: state.workerInstanceKey,
       startDate: state.startDate,
       endDate: new Date(),
       info: state.info,
@@ -112,11 +112,13 @@ export async function processUploadQueue() {
 
     // update live stats
     {
-      liveGlobalStats.imageCount++;
-      liveGlobalStats.pixelCount += state.info.width * state.info.height;
-      const userIdSet = new Set(liveGlobalStats.userIds);
+      globalStats.imageCount++;
+      globalStats.stepCount += state.info.steps;
+      globalStats.pixelCount += state.info.width * state.info.height;
+      globalStats.pixelStepCount += state.info.width * state.info.height * state.info.steps;
+      const userIdSet = new Set(globalStats.userIds);
       userIdSet.add(state.from.id);
-      liveGlobalStats.userIds = [...userIdSet];
+      globalStats.userIds = [...userIdSet];
     }
 
     // delete the status message

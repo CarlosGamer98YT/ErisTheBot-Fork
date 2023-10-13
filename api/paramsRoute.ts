@@ -30,18 +30,15 @@ export const paramsRoute = createMethodFilter({
         return { status: 401, body: { type: "text/plain", data: "Must be logged in" } };
       }
       const chat = await bot.api.getChat(session.userId);
-      if (chat.type !== "private") {
-        throw new Error("Chat is not private");
-      }
-      const userName = chat.username;
-      if (!userName) {
+      if (chat.type !== "private") throw new Error("Chat is not private");
+      if (!chat.username) {
         return { status: 403, body: { type: "text/plain", data: "Must have a username" } };
       }
       const config = await getConfig();
-      if (!config?.adminUsernames?.includes(userName)) {
+      if (!config?.adminUsernames?.includes(chat.username)) {
         return { status: 403, body: { type: "text/plain", data: "Must be an admin" } };
       }
-      logger().info(`User ${userName} updated default params: ${JSON.stringify(body.data)}`);
+      logger().info(`User ${chat.username} updated default params: ${JSON.stringify(body.data)}`);
       const defaultParams = deepMerge(config.defaultParams ?? {}, body.data);
       await setConfig({ defaultParams });
       return { status: 200, body: { type: "application/json", data: config.defaultParams } };

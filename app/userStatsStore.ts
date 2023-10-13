@@ -13,14 +13,24 @@ export const userStatsSchema = {
   properties: {
     userId: { type: "number" },
     imageCount: { type: "number" },
+    stepCount: { type: "number" },
     pixelCount: { type: "number" },
+    pixelStepCount: { type: "number" },
     tagCountMap: {
       type: "object",
       additionalProperties: { type: "number" },
     },
     timestamp: { type: "number" },
   },
-  required: ["userId", "imageCount", "pixelCount", "tagCountMap", "timestamp"],
+  required: [
+    "userId",
+    "imageCount",
+    "stepCount",
+    "pixelCount",
+    "pixelStepCount",
+    "tagCountMap",
+    "timestamp",
+  ],
 } as const satisfies JsonSchema;
 
 export type UserStats = jsonType<typeof userStatsSchema>;
@@ -48,7 +58,9 @@ export const getUserStats = kvMemoize(
   ["userStats"],
   async (userId: number): Promise<UserStats> => {
     let imageCount = 0;
+    let stepCount = 0;
     let pixelCount = 0;
+    let pixelStepCount = 0;
     const tagCountMap: Record<string, number> = {};
 
     logger().info(`Calculating user stats for ${userId}`);
@@ -57,7 +69,11 @@ export const getUserStats = kvMemoize(
       const generation of generationStore.listBy("fromId", { value: userId })
     ) {
       imageCount++;
+      stepCount += generation.value.info?.steps ?? 0;
       pixelCount += (generation.value.info?.width ?? 0) * (generation.value.info?.height ?? 0);
+      pixelStepCount += (generation.value.info?.width ?? 0) *
+        (generation.value.info?.height ?? 0) *
+        (generation.value.info?.steps ?? 0);
 
       const tags = generation.value.info?.prompt
         // split on punctuation and newlines
@@ -85,7 +101,9 @@ export const getUserStats = kvMemoize(
     return {
       userId,
       imageCount,
+      stepCount,
       pixelCount,
+      pixelStepCount,
       tagCountMap,
       timestamp: Date.now(),
     };

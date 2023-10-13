@@ -10,12 +10,14 @@ import { bot } from "../bot/mod.ts";
 import { PngInfo } from "../bot/parsePngInfo.ts";
 import { formatOrdinal } from "../utils/formatOrdinal.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
+import { getAuthHeader } from "../utils/getAuthHeader.ts";
 import { SdError } from "./SdError.ts";
 import { getConfig } from "./config.ts";
 import { db, fs } from "./db.ts";
 import { SdGenerationInfo } from "./generationStore.ts";
 import * as SdApi from "./sdApi.ts";
 import { uploadQueue } from "./uploadQueue.ts";
+import { workerInstanceStore } from "./workerInstanceStore.ts";
 
 const logger = () => getLogger();
 
@@ -34,7 +36,7 @@ interface GenerationJob {
   chat: Chat;
   requestMessage: Message;
   replyMessage: Message;
-  sdInstanceId?: string;
+  workerInstanceKey?: string;
   progress?: number;
 }
 
@@ -47,18 +49,17 @@ export const activeGenerationWorkers = new Map<string, Worker<GenerationJob>>();
  */
 export async function processGenerationQueue() {
   while (true) {
-    const config = await getConfig();
-
-    for (const [sdInstanceId, sdInstance] of Object.entries(config?.sdInstances ?? {})) {
-      const activeWorker = activeGenerationWorkers.get(sdInstanceId);
+    for await (const workerInstance of workerInstanceStore.listAll()) {
+      const activeWorker = activeGenerationWorkers.get(workerInstance.id);
       if (activeWorker?.isProcessing) {
         continue;
       }
 
       const workerSdClient = createOpenApiClient<SdApi.paths>({
-        baseUrl: sdInstance.api.url,
-        headers: { "Authorization": sdInstance.api.auth },
+        baseUrl: workerInstance.value.sdUrl,
+        headers: getAuthHeader(workerInstance.value.sdAuth),
       });
+
       // check if worker is up
       const activeWorkerStatus = await workerSdClient.GET("/sdapi/v1/memory", {
         signal: AbortSignal.timeout(10_000),
@@ -70,16 +71,20 @@ export async function processGenerationQueue() {
           return response;
         })
         .catch((error) => {
-          logger().debug(`Worker ${sdInstanceId} is down: ${error}`);
+          workerInstance.update({ lastError: { message: error.message, time: Date.now() } })
+            .catch(() => undefined);
+          logger().debug(`Worker ${workerInstance.value.key} is down: ${error}`);
         });
+
       if (!activeWorkerStatus?.data) {
         continue;
       }
 
       // create worker
       const newWorker = generationQueue.createWorker(async ({ state }, updateJob) => {
-        await processGenerationJob(state, updateJob, sdInstanceId);
+        await processGenerationJob(state, updateJob, workerInstance.id);
       });
+
       newWorker.addEventListener("error", (e) => {
         logger().error(
           `Generation failed for ${formatUserChat(e.detail.job.state)}: ${e.detail.error}`,
@@ -96,11 +101,19 @@ export async function processGenerationQueue() {
           },
         ).catch(() => undefined);
         newWorker.stopProcessing();
-        logger().info(`Stopped worker ${sdInstanceId}`);
+        workerInstance.update({ lastError: { message: e.detail.error.message, time: Date.now() } })
+          .catch(() => undefined);
+        logger().info(`Stopped worker ${workerInstance.value.key}`);
       });
+
+      newWorker.addEventListener("complete", () => {
+        workerInstance.update({ lastOnlineTime: Date.now() }).catch(() => undefined);
+      });
+
+      await workerInstance.update({ lastOnlineTime: Date.now() });
       newWorker.processJobs();
-      activeGenerationWorkers.set(sdInstanceId, newWorker);
-      logger().info(`Started worker ${sdInstanceId}`);
+      activeGenerationWorkers.set(workerInstance.id, newWorker);
+      logger().info(`Started worker ${workerInstance.value.key}`);
     }
     await delay(60_000);
   }
@@ -112,19 +125,19 @@ export async function processGenerationQueue() {
 async function processGenerationJob(
   state: GenerationJob,
   updateJob: (job: Partial<JobData<GenerationJob>>) => Promise<void>,
-  sdInstanceId: string,
+  workerInstanceId: string,
 ) {
   const startDate = new Date();
   const config = await getConfig();
-  const sdInstance = config?.sdInstances?.[sdInstanceId];
-  if (!sdInstance) {
-    throw new Error(`Unknown sdInstanceId: ${sdInstanceId}`);
+  const workerInstance = await workerInstanceStore.getById(workerInstanceId);
+  if (!workerInstance) {
+    throw new Error(`Unknown workerInstanceId: ${workerInstanceId}`);
   }
   const workerSdClient = createOpenApiClient<SdApi.paths>({
-    baseUrl: sdInstance.api.url,
-    headers: { "Authorization": sdInstance.api.auth },
+    baseUrl: workerInstance.value.sdUrl,
+    headers: getAuthHeader(workerInstance.value.sdAuth),
   });
-  state.sdInstanceId = sdInstanceId;
+  state.workerInstanceKey = workerInstance.value.key;
   state.progress = 0;
   logger().debug(`Generation started for ${formatUserChat(state)}`);
   await updateJob({ state: state });
@@ -142,14 +155,16 @@ async function processGenerationJob(
   await bot.api.editMessageText(
     state.replyMessage.chat.id,
     state.replyMessage.message_id,
-    `Generating your prompt now... 0% using ${sdInstance.name || sdInstanceId}`,
+    `Generating your prompt now... 0% using ${
+      workerInstance.value.name || workerInstance.value.key
+    }`,
     { maxAttempts: 1 },
   ).catch(() => undefined);
 
   // reduce size if worker can't handle the resolution
   const size = limitSize(
     { ...config.defaultParams, ...state.task.params },
-    sdInstance.maxResolution,
+    1024 * 1024,
   );
   function limitSize(
     { width, height }: { width?: number; height?: number },
@@ -233,7 +248,7 @@ async function processGenerationJob(
         state.replyMessage.message_id,
         `Generating your prompt now... ${
           (progressResponse.data.progress * 100).toFixed(0)
-        }% using ${sdInstance.name || sdInstanceId}`,
+        }% using ${workerInstance.value.name || workerInstance.value.key}`,
         { maxAttempts: 1 },
       ).catch(() => undefined);
     }
@@ -268,7 +283,7 @@ async function processGenerationJob(
     from: state.from,
     requestMessage: state.requestMessage,
     replyMessage: state.replyMessage,
-    sdInstanceId: sdInstanceId,
+    workerInstanceKey: workerInstance.value.key,
     startDate,
     endDate: new Date(),
     imageKeys,

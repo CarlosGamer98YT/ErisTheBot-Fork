@@ -57,6 +57,9 @@ export function AppHeader(
         <NavTab to="/">
           Stats
         </NavTab>
+        <NavTab to="/workers">
+          Workers
+        </NavTab>
         <NavTab to="/queue">
           Queue
         </NavTab>

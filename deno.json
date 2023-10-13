@@ -42,6 +42,7 @@
     "react": "https://esm.sh/react@18.2.0?dev",
     "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?dev",
     "react-router-dom": "https://esm.sh/react-router-dom@6.16.0?dev",
+    "react-intl": "https://esm.sh/react-intl@6.4.7?external=react&alias=@types/react:react&dev",
     "swr": "https://esm.sh/swr@2.2.4?dev",
     "swr/mutation": "https://esm.sh/swr@2.2.4/mutation?dev",
     "use-local-storage": "https://esm.sh/use-local-storage@3.0.0?dev",
