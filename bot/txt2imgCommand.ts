@@ -64,7 +64,7 @@ async function txt2img(ctx: ErisContext, match: string, includeRepliedTo: boolea
     params = parsePngInfo(repliedToText, params);
   }
 
-  params = parsePngInfo(match, params);
+  params = parsePngInfo(match, params, true);
 
   if (!params.prompt) {
     await ctx.reply(

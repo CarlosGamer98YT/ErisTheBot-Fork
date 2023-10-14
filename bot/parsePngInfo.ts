@@ -25,7 +25,7 @@ interface PngInfoExtra extends PngInfo {
   upscale?: number;
 }
 
-export function parsePngInfo(pngInfo: string, baseParams?: Partial<PngInfo>): Partial<PngInfo> {
+export function parsePngInfo(pngInfo: string, baseParams?: Partial<PngInfo>, shouldParseSeed?: boolean): Partial<PngInfo> {
   const tags = pngInfo.split(/[,;]+|\.+\s|\n/u);
   let part: "prompt" | "negative_prompt" | "params" = "prompt";
   const params: Partial<PngInfoExtra> = {};
@@ -99,7 +99,14 @@ export function parsePngInfo(pngInfo: string, baseParams?: Partial<PngInfo>): Pa
           params.denoising_strength = denoisingStrength;
           break;
         }
-        case "seed":
+        case "seed": {
+          part = "params";
+          if (shouldParseSeed) {
+            const seed = Number(value.trim());
+            params.seed = seed;
+            break;
+          }
+        }
         case "model":
         case "modelhash":
         case "modelname":
