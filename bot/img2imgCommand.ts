@@ -28,7 +28,7 @@ async function img2img(
   includeRepliedTo: boolean,
   state: QuestionState = {},
 ): Promise<void> {
-  if (!ctx.from) {
+  if (!ctx.from || !ctx.message) {
     return;
   }
 
