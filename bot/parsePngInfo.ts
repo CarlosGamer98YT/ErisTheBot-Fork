@@ -3,7 +3,7 @@ import extractChunks from "png_chunks_extract";
 
 export function getPngInfo(pngData: Uint8Array): string | undefined {
   return extractChunks(pngData)
-    .filter((chunk) => chunk.name === "tEXt")
+    .filter((chunk) => chunk.name === "tEXt" || chunk.name === "iTXt")
     .map((chunk) => decode(chunk.data))
     .find((textChunk) => textChunk.keyword === "parameters")
     ?.text;
@@ -25,7 +25,11 @@ interface PngInfoExtra extends PngInfo {
   upscale?: number;
 }
 
-export function parsePngInfo(pngInfo: string, baseParams?: Partial<PngInfo>, shouldParseSeed?: boolean): Partial<PngInfo> {
+export function parsePngInfo(
+  pngInfo: string,
+  baseParams?: Partial<PngInfo>,
+  shouldParseSeed?: boolean,
+): Partial<PngInfo> {
   const tags = pngInfo.split(/[,;]+|\.+\s|\n/u);
   let part: "prompt" | "negative_prompt" | "params" = "prompt";
   const params: Partial<PngInfoExtra> = {};
@@ -104,8 +108,8 @@ export function parsePngInfo(pngInfo: string, baseParams?: Partial<PngInfo>, sho
           if (shouldParseSeed) {
             const seed = Number(value.trim());
             params.seed = seed;
-            break;
           }
+          break;
         }
         case "model":
         case "modelhash":

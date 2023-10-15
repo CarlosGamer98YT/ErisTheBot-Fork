@@ -36,6 +36,13 @@ async function pnginfo(ctx: ErisContext, includeRepliedTo: boolean): Promise<voi
   const buffer = await fetch(file.getUrl()).then((resp) => resp.arrayBuffer());
   const params = parsePngInfo(getPngInfo(new Uint8Array(buffer)) ?? "");
 
+  if (!params.prompt) {
+    ctx.reply("File doesn't contain any parameters.", {
+      reply_to_message_id: ctx.message?.message_id,
+    });
+    return;
+  }
+
   const paramsText = fmt([
     `${params.prompt}\n`,
     params.negative_prompt ? fmt`${bold("Negative prompt:")} ${params.negative_prompt}\n` : "",
