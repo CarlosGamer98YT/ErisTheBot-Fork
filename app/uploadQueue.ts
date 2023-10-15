@@ -63,12 +63,16 @@ export async function processUploadQueue() {
     ]);
 
     // parse files from reply JSON
+    let size = 0;
+    const types = new Set<string>();
     const inputFiles = await Promise.all(
       state.imageKeys.map(async (fileKey, idx) => {
         const imageBuffer = await fs.get(fileKey).then((entry) => entry.value);
         if (!imageBuffer) throw new Error("File not found");
         const imageType = await fileTypeFromBuffer(imageBuffer);
         if (!imageType) throw new Error("Image has unknown type");
+        size += imageBuffer.byteLength;
+        types.add(imageType.ext);
         return InputMediaBuilder.photo(
           new InputFile(imageBuffer, `image${idx}.${imageType.ext}`),
           // if it can fit, add caption for first photo
@@ -120,6 +124,12 @@ export async function processUploadQueue() {
       userIdSet.add(state.from.id);
       globalStats.userIds = [...userIdSet];
     }
+
+    logger().debug(
+      `Uploaded ${state.imageKeys.length} ${[...types].join(",")} images (${
+        Math.trunc(size / 1024)
+      }kB) for ${formatUserChat(state)}`,
+    );
 
     // delete the status message
     await bot.api.deleteMessage(state.replyMessage.chat.id, state.replyMessage.message_id)
