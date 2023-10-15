@@ -2,7 +2,7 @@ import { Api, Bot, Context, RawApi, session, SessionFlavor } from "grammy";
 import { FileFlavor, hydrateFiles } from "grammy_files";
 import { hydrateReply, ParseModeFlavor } from "grammy_parse_mode";
 import { run, sequentialize } from "grammy_runner";
-import { getLogger } from "std/log/mod.ts";
+import { error, info, warning } from "std/log/mod.ts";
 import { sessions } from "../api/sessionsRoute.ts";
 import { getConfig, setConfig } from "../app/config.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
@@ -12,8 +12,6 @@ import { img2imgCommand, img2imgQuestion } from "./img2imgCommand.ts";
 import { pnginfoCommand, pnginfoQuestion } from "./pnginfoCommand.ts";
 import { queueCommand } from "./queueCommand.ts";
 import { txt2imgCommand, txt2imgQuestion } from "./txt2imgCommand.ts";
-
-export const logger = () => getLogger();
 
 interface SessionData {
   chat: ErisChatData;
@@ -77,7 +75,7 @@ bot.api.config.use(async (prev, method, payload, signal) => {
     if (attempt >= maxAttempts) return result;
     const retryAfter = result.parameters?.retry_after ?? (attempt * 5);
     if (retryAfter > maxWait) return result;
-    logger().warning(
+    warning(
       `${method} (attempt ${attempt}) failed: ${result.error_code} ${result.description}`,
     );
     await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
@@ -85,7 +83,7 @@ bot.api.config.use(async (prev, method, payload, signal) => {
 });
 
 bot.catch((err) => {
-  logger().error(
+  error(
     `Handling update from ${formatUserChat(err.ctx)} failed: ${err.name} ${err.message}`,
   );
 });
@@ -131,7 +129,7 @@ bot.command("start", async (ctx) => {
     }
     session.userId = ctx.from?.id;
     sessions.set(id, session);
-    logger().info(`User ${formatUserChat(ctx)} logged in`);
+    info(`User ${formatUserChat(ctx)} logged in`);
     // TODO: show link to web ui
     await ctx.reply("Login successful! You can now return to the WebUI.", {
       reply_to_message_id: ctx.message?.message_id,
@@ -169,7 +167,7 @@ bot.command("pause", async (ctx) => {
   await setConfig({
     pausedReason: ctx.match || "No reason given",
   });
-  logger().warning(`Bot paused by ${ctx.from.first_name} because ${config.pausedReason}`);
+  warning(`Bot paused by ${ctx.from.first_name} because ${config.pausedReason}`);
   return ctx.reply("Paused");
 });
 
@@ -179,7 +177,7 @@ bot.command("resume", async (ctx) => {
   if (!config.adminUsernames.includes(ctx.from.username)) return;
   if (config.pausedReason == null) return ctx.reply("Already running");
   await setConfig({ pausedReason: null });
-  logger().info(`Bot resumed by ${ctx.from.first_name}`);
+  info(`Bot resumed by ${ctx.from.first_name}`);
   return ctx.reply("Resumed");
 });
 

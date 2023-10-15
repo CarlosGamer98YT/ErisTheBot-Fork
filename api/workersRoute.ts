@@ -1,18 +1,16 @@
-import { createEndpoint, createMethodFilter, createPathFilter } from "t_rest/server";
-import { activeGenerationWorkers } from "../app/generationQueue.ts";
-import { getConfig } from "../app/config.ts";
-import * as SdApi from "../app/sdApi.ts";
-import createOpenApiFetch from "openapi_fetch";
-import { sessions } from "./sessionsRoute.ts";
-import { bot } from "../bot/mod.ts";
-import { getLogger } from "std/log/mod.ts";
-import { WorkerInstance, workerInstanceStore } from "../app/workerInstanceStore.ts";
-import { getAuthHeader } from "../utils/getAuthHeader.ts";
-import { Model } from "indexed_kv";
-import { generationStore } from "../app/generationStore.ts";
 import { subMinutes } from "date-fns";
-
-const logger = () => getLogger();
+import { Model } from "indexed_kv";
+import createOpenApiFetch from "openapi_fetch";
+import { info } from "std/log/mod.ts";
+import { createEndpoint, createMethodFilter, createPathFilter } from "t_rest/server";
+import { getConfig } from "../app/config.ts";
+import { activeGenerationWorkers } from "../app/generationQueue.ts";
+import { generationStore } from "../app/generationStore.ts";
+import * as SdApi from "../app/sdApi.ts";
+import { WorkerInstance, workerInstanceStore } from "../app/workerInstanceStore.ts";
+import { bot } from "../bot/mod.ts";
+import { getAuthHeader } from "../utils/getAuthHeader.ts";
+import { sessions } from "./sessionsRoute.ts";
 
 export type WorkerData = Omit<WorkerInstance, "sdUrl" | "sdAuth"> & {
   id: string;
@@ -124,7 +122,7 @@ export const workersRoute = createPathFilter({
           sdUrl: body.data.sdUrl,
           sdAuth: body.data.sdAuth,
         });
-        logger().info(`User ${chat.username} created worker ${workerInstance.id}`);
+        info(`User ${chat.username} created worker ${workerInstance.id}`);
         const worker = await getWorkerData(workerInstance);
         return {
           status: 200,
@@ -202,7 +200,7 @@ export const workersRoute = createPathFilter({
           if (body.data.auth !== undefined) {
             workerInstance.value.sdAuth = body.data.auth;
           }
-          logger().info(
+          info(
             `User ${chat.username} updated worker ${params.workerId}: ${JSON.stringify(body.data)}`,
           );
           await workerInstance.update();
@@ -238,7 +236,7 @@ export const workersRoute = createPathFilter({
           if (!config?.adminUsernames?.includes(chat.username)) {
             return { status: 403, body: { type: "text/plain", data: "Must be an admin" } };
           }
-          logger().info(`User ${chat.username} deleted worker ${params.workerId}`);
+          info(`User ${chat.username} deleted worker ${params.workerId}`);
           await workerInstance.delete();
           return { status: 200, body: { type: "application/json", data: null } };
         },

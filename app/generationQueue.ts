@@ -4,7 +4,7 @@ import { JobData, Queue, Worker } from "kvmq";
 import createOpenApiClient from "openapi_fetch";
 import { delay } from "std/async/delay.ts";
 import { decode, encode } from "std/encoding/base64.ts";
-import { getLogger } from "std/log/mod.ts";
+import { debug, error, info } from "std/log/mod.ts";
 import { ulid } from "ulid";
 import { bot } from "../bot/mod.ts";
 import { PngInfo } from "../bot/parsePngInfo.ts";
@@ -18,8 +18,6 @@ import { SdGenerationInfo } from "./generationStore.ts";
 import * as SdApi from "./sdApi.ts";
 import { uploadQueue } from "./uploadQueue.ts";
 import { workerInstanceStore } from "./workerInstanceStore.ts";
-
-const logger = () => getLogger();
 
 interface GenerationJob {
   task:
@@ -73,7 +71,7 @@ export async function processGenerationQueue() {
         .catch((error) => {
           workerInstance.update({ lastError: { message: error.message, time: Date.now() } })
             .catch(() => undefined);
-          logger().debug(`Worker ${workerInstance.value.key} is down: ${error}`);
+          debug(`Worker ${workerInstance.value.key} is down: ${error}`);
         });
 
       if (!activeWorkerStatus?.data) {
@@ -86,7 +84,7 @@ export async function processGenerationQueue() {
       });
 
       newWorker.addEventListener("error", (e) => {
-        logger().error(
+        error(
           `Generation failed for ${formatUserChat(e.detail.job.state)}: ${e.detail.error}`,
         );
         bot.api.sendMessage(
@@ -103,7 +101,7 @@ export async function processGenerationQueue() {
         newWorker.stopProcessing();
         workerInstance.update({ lastError: { message: e.detail.error.message, time: Date.now() } })
           .catch(() => undefined);
-        logger().info(`Stopped worker ${workerInstance.value.key}`);
+        info(`Stopped worker ${workerInstance.value.key}`);
       });
 
       newWorker.addEventListener("complete", () => {
@@ -113,7 +111,7 @@ export async function processGenerationQueue() {
       await workerInstance.update({ lastOnlineTime: Date.now() });
       newWorker.processJobs();
       activeGenerationWorkers.set(workerInstance.id, newWorker);
-      logger().info(`Started worker ${workerInstance.value.key}`);
+      info(`Started worker ${workerInstance.value.key}`);
     }
     await delay(60_000);
   }
@@ -139,7 +137,7 @@ async function processGenerationJob(
   });
   state.workerInstanceKey = workerInstance.value.key;
   state.progress = 0;
-  logger().debug(`Generation started for ${formatUserChat(state)}`);
+  debug(`Generation started for ${formatUserChat(state)}`);
   await updateJob({ state: state });
 
   // check if bot can post messages in this chat
@@ -253,7 +251,7 @@ async function processGenerationJob(
       ).catch(() => undefined);
     }
 
-    await Promise.race([delay(1000), responsePromise]).catch(() => undefined);
+    await Promise.race([delay(2_000), responsePromise]).catch(() => undefined);
   } while (await promiseState(responsePromise) === "pending");
 
   // check response
@@ -298,7 +296,7 @@ async function processGenerationJob(
     { maxAttempts: 1 },
   ).catch(() => undefined);
 
-  logger().debug(`Generation finished for ${formatUserChat(state)}`);
+  debug(`Generation finished for ${formatUserChat(state)}`);
 }
 
 /**

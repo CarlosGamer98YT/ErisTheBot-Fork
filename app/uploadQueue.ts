@@ -4,14 +4,12 @@ import { bold, fmt } from "grammy_parse_mode";
 import { Chat, Message, User } from "grammy_types";
 import { Queue } from "kvmq";
 import { format } from "std/fmt/duration.ts";
-import { getLogger } from "std/log/mod.ts";
+import { debug, error } from "std/log/mod.ts";
 import { bot } from "../bot/mod.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
 import { db, fs } from "./db.ts";
 import { generationStore, SdGenerationInfo } from "./generationStore.ts";
 import { globalStats } from "./globalStats.ts";
-
-const logger = () => getLogger();
 
 interface UploadJob {
   from: User;
@@ -125,7 +123,7 @@ export async function processUploadQueue() {
       globalStats.userIds = [...userIdSet];
     }
 
-    logger().debug(
+    debug(
       `Uploaded ${state.imageKeys.length} ${[...types].join(",")} images (${
         Math.trunc(size / 1024)
       }kB) for ${formatUserChat(state)}`,
@@ -137,7 +135,7 @@ export async function processUploadQueue() {
   }, { concurrency: 3 });
 
   uploadWorker.addEventListener("error", (e) => {
-    logger().error(`Upload failed for ${formatUserChat(e.detail.job.state)}: ${e.detail.error}`);
+    error(`Upload failed for ${formatUserChat(e.detail.job.state)}: ${e.detail.error}`);
     bot.api.sendMessage(
       e.detail.job.state.requestMessage.chat.id,
       `Upload failed: ${e.detail.error}\n\n` +

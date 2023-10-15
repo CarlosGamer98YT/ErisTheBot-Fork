@@ -1,9 +1,10 @@
 import { CommandContext } from "grammy";
 import { StatelessQuestion } from "grammy_stateless_question";
+import { debug } from "std/log/mod.ts";
 import { getConfig } from "../app/config.ts";
 import { generationQueue } from "../app/generationQueue.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
-import { ErisContext, logger } from "./mod.ts";
+import { ErisContext } from "./mod.ts";
 import { getPngInfo, parsePngInfo, PngInfo } from "./parsePngInfo.ts";
 
 export const txt2imgQuestion = new StatelessQuestion<ErisContext>(
@@ -91,5 +92,5 @@ async function txt2img(ctx: ErisContext, match: string, includeRepliedTo: boolea
     replyMessage: replyMessage,
   }, { retryCount: 3, retryDelayMs: 10_000 });
 
-  logger().debug(`Generation (txt2img) enqueued for ${formatUserChat(ctx.message)}`);
+  debug(`Generation (txt2img) enqueued for ${formatUserChat(ctx.message)}`);
 }

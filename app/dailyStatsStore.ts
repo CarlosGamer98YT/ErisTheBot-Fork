@@ -1,12 +1,10 @@
 import { UTCDateMini } from "@date-fns/utc";
 import { hoursToMilliseconds, isSameDay, minutesToMilliseconds } from "date-fns";
-import { getLogger } from "std/log/mod.ts";
+import { info } from "std/log/mod.ts";
 import { JsonSchema, jsonType } from "t_rest/server";
 import { db } from "./db.ts";
 import { generationStore } from "./generationStore.ts";
 import { kvMemoize } from "./kvMemoize.ts";
-
-const logger = () => getLogger();
 
 export const dailyStatsSchema = {
   type: "object",
@@ -36,7 +34,7 @@ export const getDailyStats = kvMemoize(
     const after = new Date(Date.UTC(year, month - 1, day));
     const before = new Date(Date.UTC(year, month - 1, day + 1));
 
-    logger().info(`Calculating daily stats for ${year}-${month}-${day}`);
+    info(`Calculating daily stats for ${year}-${month}-${day}`);
 
     for await (
       const generation of generationStore.listAll({ after, before })

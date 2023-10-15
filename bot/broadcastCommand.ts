@@ -1,10 +1,11 @@
 import { CommandContext } from "grammy";
 import { bold, fmt, FormattedString } from "grammy_parse_mode";
 import { distinctBy } from "std/collections/distinct_by.ts";
+import { error, info } from "std/log/mod.ts";
 import { getConfig } from "../app/config.ts";
 import { generationStore } from "../app/generationStore.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
-import { ErisContext, logger } from "./mod.ts";
+import { ErisContext } from "./mod.ts";
 
 export async function broadcastCommand(ctx: CommandContext<ErisContext>) {
   if (!ctx.from?.username) {
@@ -46,10 +47,10 @@ export async function broadcastCommand(ctx: CommandContext<ErisContext>) {
   for (const gen of gens) {
     try {
       await ctx.api.sendMessage(gen.value.from.id, text);
-      logger().info(`Broadcasted to ${formatUserChat({ from: gen.value.from })}`);
+      info(`Broadcasted to ${formatUserChat({ from: gen.value.from })}`);
       sentCount++;
     } catch (err) {
-      logger().error(`Broadcasting to ${formatUserChat({ from: gen.value.from })} failed: ${err}`);
+      error(`Broadcasting to ${formatUserChat({ from: gen.value.from })} failed: ${err}`);
       errors.push(fmt`${bold(formatUserChat({ from: gen.value.from }))} - ${err.message}\n`);
     }
     const fmtMessage = getMessage();

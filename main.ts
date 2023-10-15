@@ -1,18 +1,20 @@
 /// <reference lib="deno.unstable" />
 import "std/dotenv/load.ts";
 import { ConsoleHandler } from "std/log/handlers.ts";
-import { setup } from "std/log/mod.ts";
+import { LevelName, setup } from "std/log/mod.ts";
 import { serveUi } from "./api/mod.ts";
 import { runAllTasks } from "./app/mod.ts";
 import { runBot } from "./bot/mod.ts";
 
+const logLevel = Deno.env.get("LOG_LEVEL")?.toUpperCase() as LevelName ?? "INFO";
+
 // setup logging
 setup({
   handlers: {
-    console: new ConsoleHandler("INFO"),
+    console: new ConsoleHandler(logLevel),
   },
   loggers: {
-    default: { level: "INFO", handlers: ["console"] },
+    default: { level: logLevel, handlers: ["console"] },
   },
 });
 

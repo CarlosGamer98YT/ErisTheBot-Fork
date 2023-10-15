@@ -1,12 +1,10 @@
 import { minutesToMilliseconds } from "date-fns";
 import { Store } from "indexed_kv";
-import { getLogger } from "std/log/mod.ts";
+import { info } from "std/log/mod.ts";
 import { JsonSchema, jsonType } from "t_rest/server";
 import { db } from "./db.ts";
 import { generationStore } from "./generationStore.ts";
 import { kvMemoize } from "./kvMemoize.ts";
-
-const logger = () => getLogger();
 
 export const userStatsSchema = {
   type: "object",
@@ -63,7 +61,7 @@ export const getUserStats = kvMemoize(
     let pixelStepCount = 0;
     const tagCountMap: Record<string, number> = {};
 
-    logger().info(`Calculating user stats for ${userId}`);
+    info(`Calculating user stats for ${userId}`);
 
     for await (
       const generation of generationStore.listBy("fromId", { value: userId })

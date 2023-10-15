@@ -1,10 +1,11 @@
 import { CommandContext } from "grammy";
 import { StatelessQuestion } from "grammy_stateless_question";
 import { maxBy } from "std/collections/max_by.ts";
+import { debug } from "std/log/mod.ts";
 import { getConfig } from "../app/config.ts";
 import { generationQueue } from "../app/generationQueue.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
-import { ErisContext, logger } from "./mod.ts";
+import { ErisContext } from "./mod.ts";
 import { parsePngInfo, PngInfo } from "./parsePngInfo.ts";
 
 type QuestionState = { fileId?: string; params?: Partial<PngInfo> };
@@ -126,5 +127,5 @@ async function img2img(
     replyMessage: replyMessage,
   }, { retryCount: 3, repeatDelayMs: 10_000 });
 
-  logger().debug(`Generation (img2img) enqueued for ${formatUserChat(ctx.message)}`);
+  debug(`Generation (img2img) enqueued for ${formatUserChat(ctx.message)}`);
 }
