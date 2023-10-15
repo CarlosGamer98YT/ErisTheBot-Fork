@@ -28,7 +28,11 @@ async function img2img(
   includeRepliedTo: boolean,
   state: QuestionState = {},
 ): Promise<void> {
-  if (!ctx.message?.from?.id) {
+  if (!ctx.from) {
+    return;
+  }
+
+  if (ctx.from.is_bot) {
     return;
   }
 

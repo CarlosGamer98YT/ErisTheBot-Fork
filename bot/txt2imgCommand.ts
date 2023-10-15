@@ -20,7 +20,11 @@ export async function txt2imgCommand(ctx: CommandContext<ErisContext>) {
 }
 
 async function txt2img(ctx: ErisContext, match: string, includeRepliedTo: boolean): Promise<void> {
-  if (!ctx.message?.from?.id) {
+  if (!ctx.from) {
+    return;
+  }
+
+  if (ctx.from.is_bot) {
     return;
   }
 
