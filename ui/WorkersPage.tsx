@@ -249,7 +249,7 @@ function WorkerListItem(props: { worker: WorkerData; sessionId?: string }) {
               body: {
                 type: "application/json",
                 data: {
-                  auth: user && password ? { user, password } : null,
+                  sdAuth: user && password ? { user, password } : null,
                 },
               },
             });

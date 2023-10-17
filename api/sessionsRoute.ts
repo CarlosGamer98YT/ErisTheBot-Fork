@@ -1,4 +1,3 @@
-// deno-lint-ignore-file require-await
 import { createEndpoint, createMethodFilter, createPathFilter } from "t_rest/server";
 import { ulid } from "ulid";
 

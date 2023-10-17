@@ -3,14 +3,16 @@ import { Model } from "indexed_kv";
 import createOpenApiFetch from "openapi_fetch";
 import { info } from "std/log/mod.ts";
 import { createEndpoint, createMethodFilter, createPathFilter } from "t_rest/server";
-import { getConfig } from "../app/config.ts";
 import { activeGenerationWorkers } from "../app/generationQueue.ts";
 import { generationStore } from "../app/generationStore.ts";
 import * as SdApi from "../app/sdApi.ts";
-import { WorkerInstance, workerInstanceStore } from "../app/workerInstanceStore.ts";
-import { bot } from "../bot/mod.ts";
+import {
+  WorkerInstance,
+  workerInstanceSchema,
+  workerInstanceStore,
+} from "../app/workerInstanceStore.ts";
 import { getAuthHeader } from "../utils/getAuthHeader.ts";
-import { sessions } from "./sessionsRoute.ts";
+import { withUser } from "./withUser.ts";
 
 export type WorkerData = Omit<WorkerInstance, "sdUrl" | "sdAuth"> & {
   id: string;
@@ -69,7 +71,6 @@ export const workersRoute = createPathFilter({
       async () => {
         const workerInstances = await workerInstanceStore.getAll();
         const workers = await Promise.all(workerInstances.map(getWorkerData));
-
         return {
           status: 200,
           body: { type: "application/json", data: workers satisfies WorkerData[] },
@@ -83,51 +84,18 @@ export const workersRoute = createPathFilter({
         },
         body: {
           type: "application/json",
-          schema: {
-            type: "object",
-            properties: {
-              key: { type: "string" },
-              name: { type: ["string", "null"] },
-              sdUrl: { type: "string" },
-              sdAuth: {
-                type: ["object", "null"],
-                properties: {
-                  user: { type: "string" },
-                  password: { type: "string" },
-                },
-                required: ["user", "password"],
-              },
-            },
-            required: ["key", "name", "sdUrl", "sdAuth"],
-          },
+          schema: workerInstanceSchema,
         },
       },
       async ({ query, body }) => {
-        const session = sessions.get(query.sessionId);
-        if (!session?.userId) {
-          return { status: 401, body: { type: "text/plain", data: "Must be logged in" } };
-        }
-        const chat = await bot.api.getChat(session.userId);
-        if (chat.type !== "private") throw new Error("Chat is not private");
-        if (!chat.username) {
-          return { status: 403, body: { type: "text/plain", data: "Must have a username" } };
-        }
-        const config = await getConfig();
-        if (!config?.adminUsernames?.includes(chat.username)) {
-          return { status: 403, body: { type: "text/plain", data: "Must be an admin" } };
-        }
-        const workerInstance = await workerInstanceStore.create({
-          key: body.data.key,
-          name: body.data.name,
-          sdUrl: body.data.sdUrl,
-          sdAuth: body.data.sdAuth,
-        });
-        info(`User ${chat.username} created worker ${workerInstance.id}`);
-        const worker = await getWorkerData(workerInstance);
-        return {
-          status: 200,
-          body: { type: "application/json", data: worker satisfies WorkerData },
-        };
+        return withUser(query, async (chat) => {
+          const workerInstance = await workerInstanceStore.create(body.data);
+          info(`User ${chat.username} created worker ${workerInstance.id}`);
+          return {
+            status: 200,
+            body: { type: "application/json", data: await getWorkerData(workerInstance) },
+          };
+        }, { admin: true });
       },
     ),
   }),
@@ -141,10 +109,9 @@ export const workersRoute = createPathFilter({
           if (!workerInstance) {
             return { status: 404, body: { type: "text/plain", data: `Worker not found` } };
           }
-          const worker: WorkerData = await getWorkerData(workerInstance);
           return {
             status: 200,
-            body: { type: "application/json", data: worker satisfies WorkerData },
+            body: { type: "application/json", data: await getWorkerData(workerInstance) },
           };
         },
       ),
@@ -155,22 +122,7 @@ export const workersRoute = createPathFilter({
           },
           body: {
             type: "application/json",
-            schema: {
-              type: "object",
-              properties: {
-                key: { type: "string" },
-                name: { type: ["string", "null"] },
-                sdUrl: { type: "string" },
-                auth: {
-                  type: ["object", "null"],
-                  properties: {
-                    user: { type: "string" },
-                    password: { type: "string" },
-                  },
-                  required: ["user", "password"],
-                },
-              },
-            },
+            schema: { ...workerInstanceSchema, required: [] },
           },
         },
         async ({ params, query, body }) => {
@@ -178,37 +130,18 @@ export const workersRoute = createPathFilter({
           if (!workerInstance) {
             return { status: 404, body: { type: "text/plain", data: `Worker not found` } };
           }
-          const session = sessions.get(query.sessionId);
-          if (!session?.userId) {
-            return { status: 401, body: { type: "text/plain", data: "Must be logged in" } };
-          }
-          const chat = await bot.api.getChat(session.userId);
-          if (chat.type !== "private") throw new Error("Chat is not private");
-          if (!chat.username) {
-            return { status: 403, body: { type: "text/plain", data: "Must have a username" } };
-          }
-          const config = await getConfig();
-          if (!config?.adminUsernames?.includes(chat.username)) {
-            return { status: 403, body: { type: "text/plain", data: "Must be an admin" } };
-          }
-          if (body.data.name !== undefined) {
-            workerInstance.value.name = body.data.name;
-          }
-          if (body.data.sdUrl !== undefined) {
-            workerInstance.value.sdUrl = body.data.sdUrl;
-          }
-          if (body.data.auth !== undefined) {
-            workerInstance.value.sdAuth = body.data.auth;
-          }
-          info(
-            `User ${chat.username} updated worker ${params.workerId}: ${JSON.stringify(body.data)}`,
-          );
-          await workerInstance.update();
-          const worker = await getWorkerData(workerInstance);
-          return {
-            status: 200,
-            body: { type: "application/json", data: worker satisfies WorkerData },
-          };
+          return withUser(query, async (chat) => {
+            info(
+              `User ${chat.username} updated worker ${params.workerId}: ${
+                JSON.stringify(body.data)
+              }`,
+            );
+            await workerInstance.update(body.data);
+            return {
+              status: 200,
+              body: { type: "application/json", data: await getWorkerData(workerInstance) },
+            };
+          }, { admin: true });
         },
       ),
       DELETE: createEndpoint(
@@ -223,22 +156,11 @@ export const workersRoute = createPathFilter({
           if (!workerInstance) {
             return { status: 404, body: { type: "text/plain", data: `Worker not found` } };
           }
-          const session = sessions.get(query.sessionId);
-          if (!session?.userId) {
-            return { status: 401, body: { type: "text/plain", data: "Must be logged in" } };
-          }
-          const chat = await bot.api.getChat(session.userId);
-          if (chat.type !== "private") throw new Error("Chat is not private");
-          if (!chat.username) {
-            return { status: 403, body: { type: "text/plain", data: "Must have a username" } };
-          }
-          const config = await getConfig();
-          if (!config?.adminUsernames?.includes(chat.username)) {
-            return { status: 403, body: { type: "text/plain", data: "Must be an admin" } };
-          }
-          info(`User ${chat.username} deleted worker ${params.workerId}`);
-          await workerInstance.delete();
-          return { status: 200, body: { type: "application/json", data: null } };
+          return withUser(query, async (chat) => {
+            info(`User ${chat.username} deleted worker ${params.workerId}`);
+            await workerInstance.delete();
+            return { status: 200, body: { type: "application/json", data: null } };
+          }, { admin: true });
         },
       ),
     }),

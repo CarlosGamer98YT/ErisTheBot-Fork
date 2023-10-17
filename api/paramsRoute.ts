@@ -2,8 +2,7 @@ import { deepMerge } from "std/collections/deep_merge.ts";
 import { info } from "std/log/mod.ts";
 import { createEndpoint, createMethodFilter } from "t_rest/server";
 import { configSchema, getConfig, setConfig } from "../app/config.ts";
-import { bot } from "../bot/mod.ts";
-import { sessions } from "./sessionsRoute.ts";
+import { withUser } from "./withUser.ts";
 
 export const paramsRoute = createMethodFilter({
   GET: createEndpoint(
@@ -23,23 +22,13 @@ export const paramsRoute = createMethodFilter({
       },
     },
     async ({ query, body }) => {
-      const session = sessions.get(query.sessionId);
-      if (!session?.userId) {
-        return { status: 401, body: { type: "text/plain", data: "Must be logged in" } };
-      }
-      const chat = await bot.api.getChat(session.userId);
-      if (chat.type !== "private") throw new Error("Chat is not private");
-      if (!chat.username) {
-        return { status: 403, body: { type: "text/plain", data: "Must have a username" } };
-      }
-      const config = await getConfig();
-      if (!config?.adminUsernames?.includes(chat.username)) {
-        return { status: 403, body: { type: "text/plain", data: "Must be an admin" } };
-      }
-      info(`User ${chat.username} updated default params: ${JSON.stringify(body.data)}`);
-      const defaultParams = deepMerge(config.defaultParams ?? {}, body.data);
-      await setConfig({ defaultParams });
-      return { status: 200, body: { type: "application/json", data: config.defaultParams } };
+      return withUser(query, async (chat) => {
+        const config = await getConfig();
+        info(`User ${chat.username} updated default params: ${JSON.stringify(body.data)}`);
+        const defaultParams = deepMerge(config.defaultParams ?? {}, body.data);
+        await setConfig({ defaultParams });
+        return { status: 200, body: { type: "application/json", data: config.defaultParams } };
+      }, { admin: true });
     },
   ),
 });

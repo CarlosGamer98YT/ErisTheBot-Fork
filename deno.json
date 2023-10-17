@@ -9,6 +9,13 @@
   "fmt": {
     "lineWidth": 100
   },
+  "lint": {
+    "rules": {
+      "exclude": [
+        "require-await"
+      ]
+    }
+  },
   "imports": {
     "@date-fns/utc": "https://cdn.skypack.dev/@date-fns/utc@1.1.0?dts",
     "async": "https://deno.land/x/async@v2.0.2/mod.ts",
