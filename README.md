@@ -29,3 +29,11 @@ You can configure more stuff in [Eris WebUI](http://localhost:5999/) when runnin
 
 The Stable Diffusion API types are auto-generated. To regenerate them, first start your SD WebUI
 with `--nowebui --api`, and then run `deno task generate`
+
+## Project structure
+
+- `/api` - Eris API served at `http://localhost:5999/api/`.
+- `/app` - Queue handling and other core processes.
+- `/bot` - Handling bot commands and other updates from Telegram API.
+- `/ui` - Eris WebUI frontend files served at `http://localhost:5999/`.
+- `/util` - Utility functions shared by other parts.
