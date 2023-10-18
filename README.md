@@ -26,9 +26,5 @@ worker.
 
 ## Codegen
 
-The Stable Diffusion API in `app/sdApi.ts` is auto-generated. To regenerate it, first start your SD
-WebUI with `--nowebui --api`, and then run:
-
-```sh
-deno run npm:openapi-typescript http://localhost:7861/openapi.json -o app/sdApi.ts
-```
+The Stable Diffusion API types are auto-generated. To regenerate them, first start your SD WebUI
+with `--nowebui --api`, and then run `deno task generate`
