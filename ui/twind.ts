@@ -27,14 +27,11 @@ injectGlobal`
         rgba(0, 0, 0, 0.1) 14px,
         rgba(0, 0, 0, 0.1) 28px
       );
-      animation: bg-stripes-scroll 0.5s linear infinite;
+      animation: bg-scroll 0.5s linear infinite;
       background-size: 40px 40px;
     }
-    @keyframes bg-stripes-scroll {
-      0% {
-        background-position: 0 40px;
-      }
-      100% {
+    @keyframes bg-scroll {
+      to {
         background-position: 40px 0;
       }
     }
@@ -63,11 +60,11 @@ injectGlobal`
         opacity 0s;
     }
 
-    .animate-fade-in {
+    .backdrop-animate-fade-in::backdrop {
       animation: fade-in 0.3s ease-out forwards;
     }
     @keyframes fade-in {
-      0% {
+      from {
         opacity: 0;
       }
     }
@@ -76,13 +73,13 @@ injectGlobal`
       animation: pop-in 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
     }
     @keyframes pop-in {
-      0% {
+      from {
         transform: scale(0.8);
         opacity: 0;
       }
     }
   }
-
+  
   @layer components {
     .link {
       @apply text-sky-600 dark:text-sky-500 rounded-sm focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-sky-600 dark:focus:outline-sky-500;
@@ -134,8 +131,8 @@ injectGlobal`
     }
 
     .dialog {
-      @apply animate-pop-in backdrop:animate-fade-in overflow-hidden overflow-y-auto rounded-md 
-        bg-zinc-100 text-zinc-900 shadow-lg backdrop:bg-black/20 dark:bg-zinc-800 dark:text-zinc-100;
+      @apply overflow-hidden overflow-y-auto rounded-md 
+        bg-zinc-100 text-zinc-900 shadow-lg backdrop:bg-black/30 dark:bg-zinc-800 dark:text-zinc-100;
     }
   }
 `;

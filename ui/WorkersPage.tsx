@@ -43,7 +43,7 @@ export function WorkersPage(props: { sessionId?: string }) {
         </button>
       )}
       <dialog
-        className="dialog"
+        className="dialog animate-pop-in backdrop-animate-fade-in"
         ref={createWorkerModalRef}
       >
         <form
@@ -231,7 +231,7 @@ function WorkerListItem(props: { worker: WorkerData; sessionId?: string }) {
         )}
       </p>
       <dialog
-        className="dialog"
+        className="dialog animate-pop-in backdrop-animate-fade-in"
         ref={editWorkerModalRef}
       >
         <form
@@ -293,7 +293,7 @@ function WorkerListItem(props: { worker: WorkerData; sessionId?: string }) {
         </form>
       </dialog>
       <dialog
-        className="dialog"
+        className="dialog animate-pop-in backdrop-animate-fade-in"
         ref={deleteWorkerModalRef}
       >
         <form
