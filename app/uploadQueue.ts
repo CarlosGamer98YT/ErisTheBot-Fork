@@ -92,7 +92,7 @@ export async function processUploadQueue() {
     // send caption in separate message if it couldn't fit
     if (caption.text.length > 1024 && caption.text.length <= 4096) {
       await bot.api.sendMessage(state.chat.id, caption.text, {
-        reply_to_message_id: resultMessages[0].message_id,
+        reply_to_message_id: resultMessages[0]!.message_id,
         allow_sending_without_reply: true,
         entities: caption.entities,
         maxWait: 60,

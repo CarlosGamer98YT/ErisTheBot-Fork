@@ -1,7 +1,7 @@
 import { route } from "reroute";
 import { serveSpa } from "serve_spa";
 import { serveApi } from "./serveApi.ts";
-import { fromFileUrl } from "std/path/mod.ts"
+import { fromFileUrl } from "std/path/mod.ts";
 
 export async function serveUi() {
   const server = Deno.serve({ port: 5999 }, (request) =>

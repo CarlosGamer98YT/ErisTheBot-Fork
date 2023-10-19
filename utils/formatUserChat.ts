@@ -1,7 +1,11 @@
 import { Chat, User } from "grammy_types";
 
 export function formatUserChat(
-  ctx: { from?: User; chat?: Chat; workerInstanceKey?: string },
+  ctx: {
+    from?: User | undefined;
+    chat?: Chat | undefined;
+    workerInstanceKey?: string | undefined;
+  },
 ) {
   const msg: string[] = [];
   if (ctx.from) {

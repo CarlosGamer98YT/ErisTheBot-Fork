@@ -5,10 +5,10 @@ import { db } from "./db.ts";
 export interface GenerationSchema {
   from: User;
   chat: Chat;
-  sdInstanceId?: string; // TODO: change to workerInstanceKey
-  info?: SdGenerationInfo;
-  startDate?: Date;
-  endDate?: Date;
+  sdInstanceId?: string | undefined; // TODO: change to workerInstanceKey
+  info?: SdGenerationInfo | undefined;
+  startDate?: Date | undefined;
+  endDate?: Date | undefined;
 }
 
 /**

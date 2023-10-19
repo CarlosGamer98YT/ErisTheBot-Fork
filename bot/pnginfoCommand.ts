@@ -1,6 +1,7 @@
 import { CommandContext } from "grammy";
 import { bold, fmt } from "grammy_parse_mode";
 import { StatelessQuestion } from "grammy_stateless_question";
+import { omitUndef } from "../utils/omitUndef.ts";
 import { ErisContext } from "./mod.ts";
 import { getPngInfo, parsePngInfo } from "./parsePngInfo.ts";
 
@@ -23,11 +24,13 @@ async function pnginfo(ctx: ErisContext, includeRepliedTo: boolean): Promise<voi
     await ctx.reply(
       "Please send me a PNG file." +
         pnginfoQuestion.messageSuffixMarkdown(),
-      {
-        reply_markup: { force_reply: true, selective: true },
-        parse_mode: "Markdown",
-        reply_to_message_id: ctx.message?.message_id,
-      },
+      omitUndef(
+        {
+          reply_markup: { force_reply: true, selective: true },
+          parse_mode: "Markdown",
+          reply_to_message_id: ctx.message?.message_id,
+        } as const,
+      ),
     );
     return;
   }
@@ -46,8 +49,11 @@ async function pnginfo(ctx: ErisContext, includeRepliedTo: boolean): Promise<voi
     params.width && params.height ? fmt`${bold("Size")}: ${params.width}x${params.height}` : "",
   ]);
 
-  await ctx.reply(paramsText.text, {
-    entities: paramsText.entities,
-    reply_to_message_id: ctx.message?.message_id,
-  });
+  await ctx.reply(
+    paramsText.text,
+    omitUndef({
+      entities: paramsText.entities,
+      reply_to_message_id: ctx.message?.message_id,
+    }),
+  );
 }

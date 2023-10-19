@@ -5,7 +5,9 @@
     "start": "deno run --unstable --allow-env --allow-read --allow-write --allow-net main.ts"
   },
   "compilerOptions": {
-    "jsx": "react"
+    "exactOptionalPropertyTypes": true,
+    "jsx": "react",
+    "noUncheckedIndexedAccess": true
   },
   "fmt": {
     "lineWidth": 100

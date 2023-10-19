@@ -11,6 +11,7 @@ import { PngInfo } from "../bot/parsePngInfo.ts";
 import { formatOrdinal } from "../utils/formatOrdinal.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
 import { getAuthHeader } from "../utils/getAuthHeader.ts";
+import { omitUndef } from "../utils/omitUndef.ts";
 import { SdError } from "./SdError.ts";
 import { getConfig } from "./config.ts";
 import { db, fs } from "./db.ts";
@@ -161,7 +162,7 @@ async function processGenerationJob(
 
   // reduce size if worker can't handle the resolution
   const size = limitSize(
-    { ...config.defaultParams, ...state.task.params },
+    omitUndef({ ...config.defaultParams, ...state.task.params }),
     1024 * 1024,
   );
   function limitSize(
@@ -182,18 +183,18 @@ async function processGenerationJob(
   // start generating the image
   const responsePromise = state.task.type === "txt2img"
     ? workerSdClient.POST("/sdapi/v1/txt2img", {
-      body: {
+      body: omitUndef({
         ...config.defaultParams,
         ...state.task.params,
         ...size,
         negative_prompt: state.task.params.negative_prompt
           ? state.task.params.negative_prompt
           : config.defaultParams?.negative_prompt,
-      },
+      }),
     })
     : state.task.type === "img2img"
     ? workerSdClient.POST("/sdapi/v1/img2img", {
-      body: {
+      body: omitUndef({
         ...config.defaultParams,
         ...state.task.params,
         ...size,
@@ -209,7 +210,7 @@ async function processGenerationJob(
             ).then((resp) => resp.arrayBuffer()),
           ),
         ],
-      },
+      }),
     })
     : undefined;
 

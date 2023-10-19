@@ -1,16 +1,20 @@
 import { CommandContext } from "grammy";
 import { bold, fmt } from "grammy_parse_mode";
 import { activeGenerationWorkers, generationQueue } from "../app/generationQueue.ts";
-import { getFlagEmoji } from "../utils/getFlagEmoji.ts";
-import { ErisContext } from "./mod.ts";
 import { workerInstanceStore } from "../app/workerInstanceStore.ts";
+import { getFlagEmoji } from "../utils/getFlagEmoji.ts";
+import { omitUndef } from "../utils/omitUndef.ts";
+import { ErisContext } from "./mod.ts";
 
 export async function queueCommand(ctx: CommandContext<ErisContext>) {
   let formattedMessage = await getMessageText();
-  const queueMessage = await ctx.replyFmt(formattedMessage, {
-    disable_notification: true,
-    reply_to_message_id: ctx.message?.message_id,
-  });
+  const queueMessage = await ctx.replyFmt(
+    formattedMessage,
+    omitUndef({
+      disable_notification: true,
+      reply_to_message_id: ctx.message?.message_id,
+    }),
+  );
   handleFutureUpdates().catch(() => undefined);
 
   async function getMessageText() {

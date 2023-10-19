@@ -1,7 +1,7 @@
 import { cx } from "@twind/core";
 import React from "react";
 
-function CounterDigit(props: { value: number; transitionDurationMs?: number }) {
+function CounterDigit(props: { value: number; transitionDurationMs?: number | undefined }) {
   const { value, transitionDurationMs = 1500 } = props;
   const rads = -(Math.floor(value) % 1_000_000) * 2 * Math.PI * 0.1;
 
@@ -36,10 +36,10 @@ const CounterText = (props: { children: React.ReactNode }) => (
 export function Counter(props: {
   value: number;
   digits: number;
-  fractionDigits?: number;
-  transitionDurationMs?: number;
-  className?: string;
-  postfix?: string;
+  fractionDigits?: number | undefined;
+  transitionDurationMs?: number | undefined;
+  className?: string | undefined;
+  postfix?: string | undefined;
 }) {
   const { value, digits, fractionDigits = 0, transitionDurationMs, className, postfix } = props;
 

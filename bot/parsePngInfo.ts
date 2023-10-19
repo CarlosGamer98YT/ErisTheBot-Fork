@@ -25,7 +25,11 @@ interface PngInfoExtra extends PngInfo {
   upscale?: number;
 }
 
-export function parsePngInfo(pngInfo: string, baseParams?: Partial<PngInfo>, shouldParseSeed?: boolean): Partial<PngInfo> {
+export function parsePngInfo(
+  pngInfo: string,
+  baseParams?: Partial<PngInfo>,
+  shouldParseSeed?: boolean,
+): Partial<PngInfo> {
   const tags = pngInfo.split(/[,;]+|\.+\s|\n/u);
   let part: "prompt" | "negative_prompt" | "params" = "prompt";
   const params: Partial<PngInfoExtra> = {};
@@ -34,7 +38,7 @@ export function parsePngInfo(pngInfo: string, baseParams?: Partial<PngInfo>, sho
   for (const tag of tags) {
     const paramValuePair = tag.trim().match(/^(\w+\s*\w*):\s+(.*)$/u);
     if (paramValuePair) {
-      const [, param, value] = paramValuePair;
+      const [_match, param = "", value = ""] = paramValuePair;
       switch (param.replace(/\s+/u, "").toLowerCase()) {
         case "positiveprompt":
         case "positive":
@@ -67,7 +71,7 @@ export function parsePngInfo(pngInfo: string, baseParams?: Partial<PngInfo>, sho
         case "size":
         case "resolution": {
           part = "params";
-          const [width, height] = value.trim()
+          const [width = 0, height = 0] = value.trim()
             .split(/\s*[x,]\s*/u, 2)
             .map((v) => v.trim())
             .map(Number);
@@ -103,9 +107,11 @@ export function parsePngInfo(pngInfo: string, baseParams?: Partial<PngInfo>, sho
           part = "params";
           if (shouldParseSeed) {
             const seed = Number(value.trim());
-            params.seed = seed;
-            break;
+            if (Number.isFinite(seed)) {
+              params.seed = seed;
+            }
           }
+          break;
         }
         case "model":
         case "modelhash":

@@ -7,7 +7,7 @@ export const usersRoute = createPathFilter({
     GET: createEndpoint(
       { query: null, body: null },
       async ({ params }) => {
-        const chat = await bot.api.getChat(params.userId);
+        const chat = await bot.api.getChat(params.userId!);
         if (chat.type !== "private") {
           throw new Error("Chat is not private");
         }
@@ -36,7 +36,7 @@ export const usersRoute = createPathFilter({
     GET: createEndpoint(
       { query: null, body: null },
       async ({ params }) => {
-        const chat = await bot.api.getChat(params.userId);
+        const chat = await bot.api.getChat(params.userId!);
         if (chat.type !== "private") {
           throw new Error("Chat is not private");
         }

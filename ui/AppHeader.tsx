@@ -34,7 +34,8 @@ export function AppHeader(
   );
 
   const bot = useSWR(
-    ['bot',"GET",{}] as const, (args) => fetchApi(...args).then(handleResponse),
+    ["bot", "GET", {}] as const,
+    (args) => fetchApi(...args).then(handleResponse),
   );
 
   const userPhoto = useSWR(

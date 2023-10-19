@@ -4,7 +4,7 @@ import { ulid } from "ulid";
 export const sessions = new Map<string, Session>();
 
 export interface Session {
-  userId?: number;
+  userId?: number | undefined;
 }
 
 export const sessionsRoute = createPathFilter({
@@ -24,7 +24,7 @@ export const sessionsRoute = createPathFilter({
     GET: createEndpoint(
       { query: null, body: null },
       async ({ params }) => {
-        const id = params.sessionId;
+        const id = params.sessionId!;
         const session = sessions.get(id);
         if (!session) {
           return { status: 401, body: { type: "text/plain", data: "Session not found" } };

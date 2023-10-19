@@ -12,6 +12,7 @@ import {
   workerInstanceStore,
 } from "../app/workerInstanceStore.ts";
 import { getAuthHeader } from "../utils/getAuthHeader.ts";
+import { omitUndef } from "../utils/omitUndef.ts";
 import { withUser } from "./withUser.ts";
 
 export type WorkerData = Omit<WorkerInstance, "sdUrl" | "sdAuth"> & {
@@ -105,7 +106,7 @@ export const workersRoute = createPathFilter({
       GET: createEndpoint(
         { query: null, body: null },
         async ({ params }) => {
-          const workerInstance = await workerInstanceStore.getById(params.workerId);
+          const workerInstance = await workerInstanceStore.getById(params.workerId!);
           if (!workerInstance) {
             return { status: 404, body: { type: "text/plain", data: `Worker not found` } };
           }
@@ -126,7 +127,7 @@ export const workersRoute = createPathFilter({
           },
         },
         async ({ params, query, body }) => {
-          const workerInstance = await workerInstanceStore.getById(params.workerId);
+          const workerInstance = await workerInstanceStore.getById(params.workerId!);
           if (!workerInstance) {
             return { status: 404, body: { type: "text/plain", data: `Worker not found` } };
           }
@@ -136,7 +137,7 @@ export const workersRoute = createPathFilter({
                 JSON.stringify(body.data)
               }`,
             );
-            await workerInstance.update(body.data);
+            await workerInstance.update(omitUndef(body.data));
             return {
               status: 200,
               body: { type: "application/json", data: await getWorkerData(workerInstance) },
@@ -152,7 +153,7 @@ export const workersRoute = createPathFilter({
           body: null,
         },
         async ({ params, query }) => {
-          const workerInstance = await workerInstanceStore.getById(params.workerId);
+          const workerInstance = await workerInstanceStore.getById(params.workerId!);
           if (!workerInstance) {
             return { status: 404, body: { type: "text/plain", data: `Worker not found` } };
           }
@@ -169,7 +170,7 @@ export const workersRoute = createPathFilter({
       GET: createEndpoint(
         { query: null, body: null },
         async ({ params }) => {
-          const workerInstance = await workerInstanceStore.getById(params.workerId);
+          const workerInstance = await workerInstanceStore.getById(params.workerId!);
           if (!workerInstance) {
             return { status: 404, body: { type: "text/plain", data: `Worker not found` } };
           }
@@ -200,7 +201,7 @@ export const workersRoute = createPathFilter({
       GET: createEndpoint(
         { query: null, body: null },
         async ({ params }) => {
-          const workerInstance = await workerInstanceStore.getById(params.workerId);
+          const workerInstance = await workerInstanceStore.getById(params.workerId!);
           if (!workerInstance) {
             return { status: 404, body: { type: "text/plain", data: `Worker not found` } };
           }

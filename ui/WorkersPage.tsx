@@ -159,7 +159,7 @@ export function WorkersPage(props: { sessionId?: string }) {
   );
 }
 
-function WorkerListItem(props: { worker: WorkerData; sessionId?: string }) {
+function WorkerListItem(props: { worker: WorkerData; sessionId: string | undefined }) {
   const { worker, sessionId } = props;
   const editWorkerModalRef = useRef<HTMLDialogElement>(null);
   const deleteWorkerModalRef = useRef<HTMLDialogElement>(null);

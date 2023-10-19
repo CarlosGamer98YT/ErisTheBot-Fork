@@ -6,6 +6,7 @@ import { error, info, warning } from "std/log/mod.ts";
 import { sessions } from "../api/sessionsRoute.ts";
 import { getConfig, setConfig } from "../app/config.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
+import { omitUndef } from "../utils/omitUndef.ts";
 import { broadcastCommand } from "./broadcastCommand.ts";
 import { cancelCommand } from "./cancelCommand.ts";
 import { img2imgCommand, img2imgQuestion } from "./img2imgCommand.ts";
@@ -19,11 +20,11 @@ interface SessionData {
 }
 
 interface ErisChatData {
-  language?: string;
+  language?: string | undefined;
 }
 
 interface ErisUserData {
-  params?: Record<string, string>;
+  params?: Record<string, string> | undefined;
 }
 
 export type ErisContext =
@@ -94,10 +95,13 @@ bot.use(async (ctx, next) => {
     await next();
   } catch (err) {
     try {
-      await ctx.reply(`Handling update failed: ${err}`, {
-        reply_to_message_id: ctx.message?.message_id,
-        allow_sending_without_reply: true,
-      });
+      await ctx.reply(
+        `Handling update failed: ${err}`,
+        omitUndef({
+          reply_to_message_id: ctx.message?.message_id,
+          allow_sending_without_reply: true,
+        }),
+      );
     } catch {
       throw err;
     }
@@ -122,24 +126,33 @@ bot.command("start", async (ctx) => {
     const id = ctx.match.trim();
     const session = sessions.get(id);
     if (session == null) {
-      await ctx.reply("Login failed: Invalid session ID", {
-        reply_to_message_id: ctx.message?.message_id,
-      });
+      await ctx.reply(
+        "Login failed: Invalid session ID",
+        omitUndef({
+          reply_to_message_id: ctx.message?.message_id,
+        }),
+      );
       return;
     }
     session.userId = ctx.from?.id;
     sessions.set(id, session);
     info(`User ${formatUserChat(ctx)} logged in`);
     // TODO: show link to web ui
-    await ctx.reply("Login successful! You can now return to the WebUI.", {
-      reply_to_message_id: ctx.message?.message_id,
-    });
+    await ctx.reply(
+      "Login successful! You can now return to the WebUI.",
+      omitUndef({
+        reply_to_message_id: ctx.message?.message_id,
+      }),
+    );
     return;
   }
 
-  await ctx.reply("Hello! Use the /txt2img command to generate an image", {
-    reply_to_message_id: ctx.message?.message_id,
-  });
+  await ctx.reply(
+    "Hello! Use the /txt2img command to generate an image",
+    omitUndef({
+      reply_to_message_id: ctx.message?.message_id,
+    }),
+  );
 });
 
 bot.command("txt2img", txt2imgCommand);
