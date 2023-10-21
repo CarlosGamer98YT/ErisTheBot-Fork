@@ -1,6 +1,6 @@
-import { cx } from "@twind/core";
 import React, { ReactNode, useState } from "react";
 import useSWR from "swr";
+import { cx } from "twind/core";
 import { fetchApi, handleResponse } from "./apiClient.tsx";
 
 export function SettingsPage(props: { sessionId: string }) {

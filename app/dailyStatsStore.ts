@@ -1,5 +1,5 @@
-import { UTCDateMini } from "@date-fns/utc";
 import { hoursToMilliseconds, isSameDay, minutesToMilliseconds } from "date-fns";
+import { UTCDateMini } from "date-fns/utc";
 import { info } from "std/log/mod.ts";
 import { JsonSchema, jsonType } from "t_rest/server";
 import { db } from "./db.ts";

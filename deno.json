@@ -1,9 +1,4 @@
 {
-  "tasks": {
-    "check": "deno check --unstable main.ts && deno check --unstable ui/main.tsx",
-    "generate": "deno run npm:openapi-typescript http://localhost:7861/openapi.json -o app/sdApi.ts",
-    "start": "deno run --unstable --allow-env --allow-read --allow-write --allow-net main.ts"
-  },
   "compilerOptions": {
     "exactOptionalPropertyTypes": true,
     "jsx": "react",
@@ -12,19 +7,10 @@
   "fmt": {
     "lineWidth": 100
   },
-  "lint": {
-    "rules": {
-      "exclude": [
-        "require-await"
-      ]
-    }
-  },
   "imports": {
-    "@date-fns/utc": "https://cdn.skypack.dev/@date-fns/utc@1.1.0?dts",
-    "@twind/core": "https://esm.sh/@twind/core@1.1.3?dev",
-    "@twind/preset-tailwind": "https://esm.sh/@twind/preset-tailwind@1.1.4?dev",
     "async": "https://deno.land/x/async@v2.0.2/mod.ts",
     "date-fns": "https://cdn.skypack.dev/date-fns@2.30.0?dts",
+    "date-fns/utc": "https://cdn.skypack.dev/@date-fns/utc@1.1.0?dts",
     "file_type": "https://esm.sh/file-type@18.5.0",
     "grammy": "https://lib.deno.dev/x/grammy@1/mod.ts",
     "grammy_autoquote": "https://lib.deno.dev/x/grammy_autoquote@1/mod.ts",
@@ -33,17 +19,17 @@
     "grammy_runner": "https://lib.deno.dev/x/grammy_runner@2/mod.ts",
     "grammy_stateless_question": "https://lib.deno.dev/x/grammy_stateless_question_alpha@3/mod.ts",
     "grammy_types": "https://lib.deno.dev/x/grammy_types@3/mod.ts",
-    "indexed_kv": "https://deno.land/x/indexed_kv@v0.5.0/mod.ts",
+    "indexed_kv": "https://deno.land/x/indexed_kv@v0.6.1/mod.ts",
     "kvfs": "https://deno.land/x/kvfs@v0.1.0/mod.ts",
     "kvmq": "https://deno.land/x/kvmq@v0.3.0/mod.ts",
     "openapi_fetch": "https://esm.sh/openapi-fetch@0.7.6",
     "png_chunk_text": "https://esm.sh/png-chunk-text@1.0.0",
     "png_chunks_extract": "https://esm.sh/png-chunks-extract@1.0.0",
     "react": "https://esm.sh/react@18.2.0?dev",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?dev",
-    "react-flip-move": "https://esm.sh/react-flip-move@3.0.5?dev",
-    "react-intl": "https://esm.sh/react-intl@6.4.7?external=react&alias=@types/react:react&dev",
-    "react-router-dom": "https://esm.sh/react-router-dom@6.16.0?dev",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?external=react&dev",
+    "react-flip-move": "https://esm.sh/react-flip-move@3.0.5?external=react&dev",
+    "react-intl": "https://esm.sh/react-intl@6.4.7?external=react&dev",
+    "react-router-dom": "https://esm.sh/react-router-dom@6.16.0?external=react&dev",
     "reroute": "https://deno.land/x/reroute@v0.1.0/mod.ts",
     "serve_spa": "https://deno.land/x/serve_spa@v0.2.0/mod.ts",
     "std/async/": "https://deno.land/std@0.201.0/async/",
@@ -53,11 +39,26 @@
     "std/fmt/": "https://deno.land/std@0.202.0/fmt/",
     "std/log/": "https://deno.land/std@0.201.0/log/",
     "std/path/": "https://deno.land/std@0.204.0/path/",
-    "swr": "https://esm.sh/swr@2.2.4?dev",
-    "swr/mutation": "https://esm.sh/swr@2.2.4/mutation?dev",
-    "t_rest/client": "https://esm.sh/ty-rest@0.4.0/client?dev",
-    "t_rest/server": "https://esm.sh/ty-rest@0.4.0/server?dev",
+    "swr": "https://esm.sh/swr@2.2.4?external=react&dev",
+    "swr/mutation": "https://esm.sh/swr@2.2.4/mutation?external=react&dev",
+    "t_rest/client": "https://esm.sh/ty-rest@0.4.1/client",
+    "t_rest/server": "https://esm.sh/ty-rest@0.4.1/server",
+    "twind/core": "https://esm.sh/@twind/core@1.1.3",
+    "twind/preset-tailwind": "https://esm.sh/@twind/preset-tailwind@1.1.4",
     "ulid": "https://deno.land/x/ulid@v0.3.0/mod.ts",
-    "use-local-storage": "https://esm.sh/use-local-storage@3.0.0?dev"
+    "use-local-storage": "https://esm.sh/use-local-storage@3.0.0?external=react&dev"
+  },
+  "lint": {
+    "rules": {
+      "exclude": [
+        "require-await"
+      ]
+    }
+  },
+  "tasks": {
+    "check": "deno check --unstable main.ts && deno check --unstable ui/main.tsx",
+    "generate": "deno run npm:openapi-typescript http://localhost:7861/openapi.json -o app/sdApi.ts",
+    "start": "deno run --unstable --allow-env --allow-read --allow-write --allow-net main.ts",
+    "test": "deno test --unstable"
   }
 }

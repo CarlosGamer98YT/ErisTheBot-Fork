@@ -1,5 +1,5 @@
-import { cx } from "@twind/core";
 import React from "react";
+import { cx } from "twind/core";
 
 export function Progress(props: { value: number; className?: string }) {
   const { value, className } = props;

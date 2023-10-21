@@ -1,7 +1,7 @@
-import { cx } from "@twind/core";
 import React, { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import useSWR from "swr";
+import { cx } from "twind/core";
 import { fetchApi, handleResponse } from "./apiClient.tsx";
 
 function NavTab(props: { to: string; children: ReactNode }) {

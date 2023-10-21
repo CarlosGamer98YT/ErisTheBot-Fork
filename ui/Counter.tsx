@@ -1,5 +1,5 @@
-import { cx } from "@twind/core";
 import React from "react";
+import { cx } from "twind/core";
 
 function CounterDigit(props: { value: number; transitionDurationMs?: number | undefined }) {
   const { value, transitionDurationMs = 1500 } = props;

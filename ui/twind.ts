@@ -1,5 +1,5 @@
-import { defineConfig, injectGlobal, install } from "@twind/core";
-import presetTailwind from "@twind/preset-tailwind";
+import { defineConfig, injectGlobal, install } from "twind/core";
+import presetTailwind from "twind/preset-tailwind";
 
 const twConfig = defineConfig({
   presets: [presetTailwind()],
