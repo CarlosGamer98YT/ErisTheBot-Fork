@@ -306,24 +306,24 @@ async function processGenerationJob(
 export async function updateGenerationQueue() {
   while (true) {
     const jobs = await generationQueue.getAllJobs();
-    let index = 0;
-    for (const job of jobs) {
-      if (job.lockUntil > new Date()) {
-        // job is currently being processed, the worker will update its status message
-        continue;
+
+    await Promise.all(jobs.map(async (job) => {
+      if (job.status === "processing") {
+        // if the job is processing, the worker will update its status message
+        return;
       }
-      if (!job.state.replyMessage) {
-        // no status message, nothing to update
-        continue;
-      }
-      index++;
+
+      // spread the updates in time randomly
+      await delay(Math.random() * 3_000);
+
       await bot.api.editMessageText(
         job.state.replyMessage.chat.id,
         job.state.replyMessage.message_id,
-        `You are ${formatOrdinal(index)} in queue.`,
+        `You are ${formatOrdinal(job.place)} in queue.`,
         { maxAttempts: 1 },
       ).catch(() => undefined);
-    }
-    await delay(3000);
+    }));
+
+    await delay(10_000);
   }
 }
