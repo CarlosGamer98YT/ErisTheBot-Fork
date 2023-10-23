@@ -132,7 +132,7 @@ export async function processUploadQueue() {
     // delete the status message
     await bot.api.deleteMessage(state.replyMessage.chat.id, state.replyMessage.message_id)
       .catch(() => undefined);
-  }, { concurrency: 3 });
+  }, { concurrency: 10 });
 
   uploadWorker.addEventListener("error", (e) => {
     error(`Upload failed for ${formatUserChat(e.detail.job.state)}: ${e.detail.error}`);
