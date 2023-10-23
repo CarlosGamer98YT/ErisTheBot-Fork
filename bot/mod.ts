@@ -4,7 +4,6 @@ import { hydrateReply, ParseModeFlavor } from "grammy_parse_mode";
 import { run, sequentialize } from "grammy_runner";
 import { error, info, warning } from "std/log/mod.ts";
 import { sessions } from "../api/sessionsRoute.ts";
-import { getConfig, setConfig } from "../app/config.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
 import { omitUndef } from "../utils/omitUndef.ts";
 import { broadcastCommand } from "./broadcastCommand.ts";
@@ -169,30 +168,6 @@ bot.command("queue", queueCommand);
 bot.command("cancel", cancelCommand);
 
 bot.command("broadcast", broadcastCommand);
-
-bot.command("pause", async (ctx) => {
-  if (!ctx.from?.username) return;
-  const config = await getConfig();
-  if (!config.adminUsernames.includes(ctx.from.username)) return;
-  if (config.pausedReason != null) {
-    return ctx.reply(`Already paused: ${config.pausedReason}`);
-  }
-  await setConfig({
-    pausedReason: ctx.match || "No reason given",
-  });
-  warning(`Bot paused by ${ctx.from.first_name} because ${config.pausedReason}`);
-  return ctx.reply("Paused");
-});
-
-bot.command("resume", async (ctx) => {
-  if (!ctx.from?.username) return;
-  const config = await getConfig();
-  if (!config.adminUsernames.includes(ctx.from.username)) return;
-  if (config.pausedReason == null) return ctx.reply("Already running");
-  await setConfig({ pausedReason: null });
-  info(`Bot resumed by ${ctx.from.first_name}`);
-  return ctx.reply("Resumed");
-});
 
 bot.command("crash", () => {
   throw new Error("Crash command used");

@@ -2,7 +2,7 @@ import { CommandContext } from "grammy";
 import { bold, fmt, FormattedString } from "grammy_parse_mode";
 import { distinctBy } from "std/collections/distinct_by.ts";
 import { error, info } from "std/log/mod.ts";
-import { getConfig } from "../app/config.ts";
+import { adminStore } from "../app/adminStore.ts";
 import { generationStore } from "../app/generationStore.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
 import { ErisContext } from "./mod.ts";
@@ -12,9 +12,9 @@ export async function broadcastCommand(ctx: CommandContext<ErisContext>) {
     return ctx.reply("I don't know who you are.");
   }
 
-  const config = await getConfig();
+  const [admin] = await adminStore.getBy("tgUserId", { value: ctx.from.id });
 
-  if (!config.adminUsernames.includes(ctx.from.username)) {
+  if (!admin) {
     return ctx.reply("Only a bot admin can use this command.");
   }
 

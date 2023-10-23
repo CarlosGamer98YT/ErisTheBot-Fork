@@ -1,79 +1,82 @@
-import React, { ReactNode, useState } from "react";
+import React, { useState } from "react";
 import useSWR from "swr";
 import { cx } from "twind/core";
-import { fetchApi, handleResponse } from "./apiClient.tsx";
+import { fetchApi, handleResponse } from "./apiClient.ts";
 
-export function SettingsPage(props: { sessionId: string }) {
+export function SettingsPage(props: { sessionId: string | null }) {
   const { sessionId } = props;
-  const session = useSWR(
+
+  const getSession = useSWR(
     sessionId ? ["sessions/{sessionId}", "GET", { params: { sessionId } }] as const : null,
     (args) => fetchApi(...args).then(handleResponse),
   );
-  const user = useSWR(
-    session.data?.userId
-      ? ["users/{userId}", "GET", { params: { userId: String(session.data.userId) } }] as const
+  const getUser = useSWR(
+    getSession.data?.userId
+      ? ["users/{userId}", "GET", { params: { userId: String(getSession.data.userId) } }] as const
       : null,
     (args) => fetchApi(...args).then(handleResponse),
   );
-  const params = useSWR(
+  const getParams = useSWR(
     ["settings/params", "GET", {}] as const,
     (args) => fetchApi(...args).then(handleResponse),
   );
-  const [changedParams, setChangedParams] = useState<Partial<typeof params.data>>({});
-  const [error, setError] = useState<string>();
+  const [newParams, setNewParams] = useState<Partial<typeof getParams.data>>({});
+  const [patchParamsError, setPatchParamsError] = useState<string>();
 
   return (
     <form
       className="flex flex-col items-stretch gap-4"
       onSubmit={(e) => {
         e.preventDefault();
-        params.mutate(() =>
+        getParams.mutate(() =>
           fetchApi("settings/params", "PATCH", {
-            query: { sessionId },
-            body: { type: "application/json", data: changedParams ?? {} },
+            query: { sessionId: sessionId ?? "" },
+            body: { type: "application/json", data: newParams ?? {} },
           }).then(handleResponse)
         )
-          .then(() => setChangedParams({}))
-          .catch((e) => setError(String(e)));
+          .then(() => setNewParams({}))
+          .catch((e) => setPatchParamsError(String(e)));
       }}
     >
       <label className="flex flex-col items-stretch gap-1">
         <span className="text-sm">
-          Negative prompt {changedParams?.negative_prompt != null ? "(Changed)" : ""}
+          Negative prompt {newParams?.negative_prompt != null ? "(Changed)" : ""}
         </span>
         <textarea
           className="input-text"
-          disabled={params.isLoading || !user.data?.isAdmin}
-          value={changedParams?.negative_prompt ??
-            params.data?.negative_prompt ??
+          disabled={getParams.isLoading || !getUser.data?.admin}
+          value={newParams?.negative_prompt ??
+            getParams.data?.negative_prompt ??
             ""}
           onChange={(e) =>
-            setChangedParams((params) => ({
+            setNewParams((params) => ({
               ...params,
               negative_prompt: e.target.value,
             }))}
         />
       </label>
+
       <label className="flex flex-col items-stretch gap-1">
         <span className="text-sm">
-          Sampler {changedParams?.sampler_name != null ? "(Changed)" : ""}
+          Sampler {newParams?.sampler_name != null ? "(Changed)" : ""}
         </span>
         <input
           className="input-text"
-          disabled={params.isLoading || !user.data?.isAdmin}
-          value={changedParams?.sampler_name ??
-            params.data?.sampler_name ??
+          disabled={getParams.isLoading || !getUser.data?.admin}
+          value={newParams?.sampler_name ??
+            getParams.data?.sampler_name ??
             ""}
           onChange={(e) =>
-            setChangedParams((params) => ({
+            setNewParams((params) => ({
               ...params,
               sampler_name: e.target.value,
             }))}
         />
       </label>
+
       <label className="flex flex-col items-stretch gap-1">
         <span className="text-sm">
-          Steps {changedParams?.steps != null ? "(Changed)" : ""}
+          Steps {newParams?.steps != null ? "(Changed)" : ""}
         </span>
         <span className="flex items-center gap-1">
           <input
@@ -82,12 +85,12 @@ export function SettingsPage(props: { sessionId: string }) {
             min={5}
             max={50}
             step={5}
-            disabled={params.isLoading || !user.data?.isAdmin}
-            value={changedParams?.steps ??
-              params.data?.steps ??
+            disabled={getParams.isLoading || !getUser.data?.admin}
+            value={newParams?.steps ??
+              getParams.data?.steps ??
               0}
             onChange={(e) =>
-              setChangedParams((params) => ({
+              setNewParams((params) => ({
                 ...params,
                 steps: Number(e.target.value),
               }))}
@@ -98,21 +101,22 @@ export function SettingsPage(props: { sessionId: string }) {
             min={5}
             max={50}
             step={5}
-            disabled={params.isLoading || !user.data?.isAdmin}
-            value={changedParams?.steps ??
-              params.data?.steps ??
+            disabled={getParams.isLoading || !getUser.data?.admin}
+            value={newParams?.steps ??
+              getParams.data?.steps ??
               0}
             onChange={(e) =>
-              setChangedParams((params) => ({
+              setNewParams((params) => ({
                 ...params,
                 steps: Number(e.target.value),
               }))}
           />
         </span>
       </label>
+
       <label className="flex flex-col items-stretch gap-1">
         <span className="text-sm">
-          Detail {changedParams?.cfg_scale != null ? "(Changed)" : ""}
+          Detail {newParams?.cfg_scale != null ? "(Changed)" : ""}
         </span>
         <span className="flex items-center gap-1">
           <input
@@ -121,12 +125,12 @@ export function SettingsPage(props: { sessionId: string }) {
             min={1}
             max={20}
             step={1}
-            disabled={params.isLoading || !user.data?.isAdmin}
-            value={changedParams?.cfg_scale ??
-              params.data?.cfg_scale ??
+            disabled={getParams.isLoading || !getUser.data?.admin}
+            value={newParams?.cfg_scale ??
+              getParams.data?.cfg_scale ??
               0}
             onChange={(e) =>
-              setChangedParams((params) => ({
+              setNewParams((params) => ({
                 ...params,
                 cfg_scale: Number(e.target.value),
               }))}
@@ -137,22 +141,23 @@ export function SettingsPage(props: { sessionId: string }) {
             min={1}
             max={20}
             step={1}
-            disabled={params.isLoading || !user.data?.isAdmin}
-            value={changedParams?.cfg_scale ??
-              params.data?.cfg_scale ??
+            disabled={getParams.isLoading || !getUser.data?.admin}
+            value={newParams?.cfg_scale ??
+              getParams.data?.cfg_scale ??
               0}
             onChange={(e) =>
-              setChangedParams((params) => ({
+              setNewParams((params) => ({
                 ...params,
                 cfg_scale: Number(e.target.value),
               }))}
           />
         </span>
       </label>
+
       <div className="flex gap-4">
         <label className="flex flex-1 flex-col items-stretch gap-1">
           <span className="text-sm">
-            Width {changedParams?.width != null ? "(Changed)" : ""}
+            Width {newParams?.width != null ? "(Changed)" : ""}
           </span>
           <input
             className="input-text"
@@ -160,12 +165,12 @@ export function SettingsPage(props: { sessionId: string }) {
             min={64}
             max={2048}
             step={64}
-            disabled={params.isLoading || !user.data?.isAdmin}
-            value={changedParams?.width ??
-              params.data?.width ??
+            disabled={getParams.isLoading || !getUser.data?.admin}
+            value={newParams?.width ??
+              getParams.data?.width ??
               0}
             onChange={(e) =>
-              setChangedParams((params) => ({
+              setNewParams((params) => ({
                 ...params,
                 width: Number(e.target.value),
               }))}
@@ -176,12 +181,12 @@ export function SettingsPage(props: { sessionId: string }) {
             min={64}
             max={2048}
             step={64}
-            disabled={params.isLoading || !user.data?.isAdmin}
-            value={changedParams?.width ??
-              params.data?.width ??
+            disabled={getParams.isLoading || !getUser.data?.admin}
+            value={newParams?.width ??
+              getParams.data?.width ??
               0}
             onChange={(e) =>
-              setChangedParams((params) => ({
+              setNewParams((params) => ({
                 ...params,
                 width: Number(e.target.value),
               }))}
@@ -189,7 +194,7 @@ export function SettingsPage(props: { sessionId: string }) {
         </label>
         <label className="flex flex-1 flex-col items-stretch gap-1">
           <span className="text-sm">
-            Height {changedParams?.height != null ? "(Changed)" : ""}
+            Height {newParams?.height != null ? "(Changed)" : ""}
           </span>
           <input
             className="input-text"
@@ -197,12 +202,12 @@ export function SettingsPage(props: { sessionId: string }) {
             min={64}
             max={2048}
             step={64}
-            disabled={params.isLoading || !user.data?.isAdmin}
-            value={changedParams?.height ??
-              params.data?.height ??
+            disabled={getParams.isLoading || !getUser.data?.admin}
+            value={newParams?.height ??
+              getParams.data?.height ??
               0}
             onChange={(e) =>
-              setChangedParams((params) => ({
+              setNewParams((params) => ({
                 ...params,
                 height: Number(e.target.value),
               }))}
@@ -213,62 +218,58 @@ export function SettingsPage(props: { sessionId: string }) {
             min={64}
             max={2048}
             step={64}
-            disabled={params.isLoading || !user.data?.isAdmin}
-            value={changedParams?.height ??
-              params.data?.height ??
+            disabled={getParams.isLoading || !getUser.data?.admin}
+            value={newParams?.height ??
+              getParams.data?.height ??
               0}
             onChange={(e) =>
-              setChangedParams((params) => ({
+              setNewParams((params) => ({
                 ...params,
                 height: Number(e.target.value),
               }))}
           />
         </label>
       </div>
-      {error ? <Alert onClose={() => setError(undefined)}>{error}</Alert> : null}
-      {params.error ? <Alert>{params.error.message}</Alert> : null}
+
+      {patchParamsError
+        ? (
+          <p className="alert">
+            <span className="flex-grow">Updating params failed: {patchParamsError}</span>
+            <button className="button-ghost" onClick={() => setPatchParamsError(undefined)}>
+              Close
+            </button>
+          </p>
+        )
+        : null}
+      {getParams.error
+        ? (
+          <p className="alert">
+            <span className="flex-grow">
+              Loading params failed: {String(getParams.error)}
+            </span>
+          </p>
+        )
+        : null}
+
       <div className="flex gap-2 items-center justify-end">
         <button
           type="button"
-          className={cx("button-outlined ripple", params.isLoading && "bg-stripes")}
-          disabled={params.isLoading || !user.data?.isAdmin ||
-            Object.keys(changedParams ?? {}).length === 0}
-          onClick={() => setChangedParams({})}
+          className={cx("button-outlined ripple", getParams.isLoading && "bg-stripes")}
+          disabled={getParams.isLoading || !getUser.data?.admin ||
+            Object.keys(newParams ?? {}).length === 0}
+          onClick={() => setNewParams({})}
         >
           Reset
         </button>
         <button
           type="submit"
-          className={cx("button-filled ripple", params.isLoading && "bg-stripes")}
-          disabled={params.isLoading || !user.data?.isAdmin ||
-            Object.keys(changedParams ?? {}).length === 0}
+          className={cx("button-filled ripple", getParams.isLoading && "bg-stripes")}
+          disabled={getParams.isLoading || !getUser.data?.admin ||
+            Object.keys(newParams ?? {}).length === 0}
         >
           Save
         </button>
       </div>
     </form>
-  );
-}
-
-function Alert(props: { children: ReactNode; onClose?: () => void }) {
-  const { children, onClose } = props;
-  return (
-    <p
-      role="alert"
-      className="px-4 py-2 flex gap-2 items-center bg-red-500 text-white rounded-sm shadow-md"
-    >
-      <span className="flex-grow">{children}</span>
-      {onClose
-        ? (
-          <button
-            type="button"
-            className="button-ghost"
-            onClick={() => onClose()}
-          >
-            Close
-          </button>
-        )
-        : null}
-    </p>
   );
 }

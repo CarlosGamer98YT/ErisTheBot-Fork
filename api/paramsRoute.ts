@@ -2,7 +2,7 @@ import { deepMerge } from "std/collections/deep_merge.ts";
 import { info } from "std/log/mod.ts";
 import { createEndpoint, createMethodFilter } from "t_rest/server";
 import { configSchema, getConfig, setConfig } from "../app/config.ts";
-import { withUser } from "./withUser.ts";
+import { withAdmin } from "./withUser.ts";
 
 export const paramsRoute = createMethodFilter({
   GET: createEndpoint(
@@ -22,13 +22,13 @@ export const paramsRoute = createMethodFilter({
       },
     },
     async ({ query, body }) => {
-      return withUser(query, async (chat) => {
+      return withAdmin(query, async (user) => {
         const config = await getConfig();
-        info(`User ${chat.username} updated default params: ${JSON.stringify(body.data)}`);
+        info(`User ${user.first_name} updated default params: ${JSON.stringify(body.data)}`);
         const defaultParams = deepMerge(config.defaultParams ?? {}, body.data);
         await setConfig({ defaultParams });
         return { status: 200, body: { type: "application/json", data: config.defaultParams } };
-      }, { admin: true });
+      });
     },
   ),
 });

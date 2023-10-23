@@ -3,9 +3,10 @@ import presetTailwind from "twind/preset-tailwind";
 
 const twConfig = defineConfig({
   presets: [presetTailwind()],
+  hash: false,
 });
 
-install(twConfig);
+install(twConfig, false);
 
 injectGlobal`
   @layer base {
@@ -89,6 +90,10 @@ injectGlobal`
       @apply h-8 w-8 animate-spin rounded-full border-4 border-transparent border-t-current;
     }
 
+    .alert {
+      @apply px-4 py-2 flex gap-2 items-center bg-red-500 text-white rounded-sm shadow-md;
+    }
+
     .button-filled {
       @apply rounded-md bg-sky-600 px-3 py-2 min-h-12
         text-sm font-semibold uppercase tracking-wider text-white shadow-sm transition-all 
@@ -111,7 +116,7 @@ injectGlobal`
     }
 
     .tab {
-      @apply inline-flex items-center px-4 text-sm text-center bg-transparent border-b-2 sm:text-base whitespace-nowrap focus:outline-none
+      @apply inline-flex items-center px-4 text-sm text-center bg-transparent border-b-2 sm:text-base whitespace-nowrap outline-none
         border-transparent dark:text-white cursor-base hover:border-zinc-400 focus:border-zinc-400 transition-all;
     }
 
@@ -131,8 +136,8 @@ injectGlobal`
     }
 
     .dialog {
-      @apply overflow-hidden overflow-y-auto rounded-md 
-        bg-zinc-100 text-zinc-900 shadow-lg backdrop:bg-black/30 dark:bg-zinc-800 dark:text-zinc-100;
+      @apply overflow-hidden overflow-y-auto rounded-md shadow-xl
+        bg-white text-zinc-900 shadow-lg backdrop:bg-black/30 dark:bg-zinc-800 dark:text-zinc-100;
     }
   }
 `;

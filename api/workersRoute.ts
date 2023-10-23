@@ -13,7 +13,7 @@ import {
 } from "../app/workerInstanceStore.ts";
 import { getAuthHeader } from "../utils/getAuthHeader.ts";
 import { omitUndef } from "../utils/omitUndef.ts";
-import { withUser } from "./withUser.ts";
+import { withAdmin } from "./withUser.ts";
 
 export type WorkerData = Omit<WorkerInstance, "sdUrl" | "sdAuth"> & {
   id: string;
@@ -89,14 +89,14 @@ export const workersRoute = createPathFilter({
         },
       },
       async ({ query, body }) => {
-        return withUser(query, async (chat) => {
+        return withAdmin(query, async (user) => {
           const workerInstance = await workerInstanceStore.create(body.data);
-          info(`User ${chat.username} created worker ${workerInstance.id}`);
+          info(`User ${user.first_name} created worker ${workerInstance.value.name}`);
           return {
             status: 200,
             body: { type: "application/json", data: await getWorkerData(workerInstance) },
           };
-        }, { admin: true });
+        });
       },
     ),
   }),
@@ -131,9 +131,9 @@ export const workersRoute = createPathFilter({
           if (!workerInstance) {
             return { status: 404, body: { type: "text/plain", data: `Worker not found` } };
           }
-          return withUser(query, async (chat) => {
+          return withAdmin(query, async (user) => {
             info(
-              `User ${chat.username} updated worker ${params.workerId}: ${
+              `User ${user.first_name} updated worker ${workerInstance.value.name}: ${
                 JSON.stringify(body.data)
               }`,
             );
@@ -142,7 +142,7 @@ export const workersRoute = createPathFilter({
               status: 200,
               body: { type: "application/json", data: await getWorkerData(workerInstance) },
             };
-          }, { admin: true });
+          });
         },
       ),
       DELETE: createEndpoint(
@@ -157,11 +157,11 @@ export const workersRoute = createPathFilter({
           if (!workerInstance) {
             return { status: 404, body: { type: "text/plain", data: `Worker not found` } };
           }
-          return withUser(query, async (chat) => {
-            info(`User ${chat.username} deleted worker ${params.workerId}`);
+          return withAdmin(query, async (user) => {
+            info(`User ${user.first_name} deleted worker ${workerInstance.value.name}`);
             await workerInstance.delete();
             return { status: 200, body: { type: "application/json", data: null } };
-          }, { admin: true });
+          });
         },
       ),
     }),

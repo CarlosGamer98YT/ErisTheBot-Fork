@@ -4,7 +4,6 @@ import { JsonSchema, jsonType } from "t_rest/server";
 export const configSchema = {
   type: "object",
   properties: {
-    adminUsernames: { type: "array", items: { type: "string" } },
     pausedReason: { type: ["string", "null"] },
     maxUserJobs: { type: "number" },
     maxJobs: { type: "number" },
@@ -31,7 +30,6 @@ export async function getConfig(): Promise<Config> {
   const configEntry = await db.get<Config>(["config"]);
   const config = configEntry?.value;
   return {
-    adminUsernames: config?.adminUsernames ?? Deno.env.get("TG_ADMIN_USERNAMES")?.split(",") ?? [],
     pausedReason: config?.pausedReason ?? null,
     maxUserJobs: config?.maxUserJobs ?? Infinity,
     maxJobs: config?.maxJobs ?? Infinity,
@@ -42,7 +40,6 @@ export async function getConfig(): Promise<Config> {
 export async function setConfig(newConfig: Partial<Config>): Promise<void> {
   const oldConfig = await getConfig();
   const config: Config = {
-    adminUsernames: newConfig.adminUsernames ?? oldConfig.adminUsernames,
     pausedReason: newConfig.pausedReason ?? oldConfig.pausedReason,
     maxUserJobs: newConfig.maxUserJobs ?? oldConfig.maxUserJobs,
     maxJobs: newConfig.maxJobs ?? oldConfig.maxJobs,

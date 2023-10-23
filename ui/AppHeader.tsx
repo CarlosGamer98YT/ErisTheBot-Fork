@@ -2,7 +2,7 @@ import React, { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import useSWR from "swr";
 import { cx } from "twind/core";
-import { fetchApi, handleResponse } from "./apiClient.tsx";
+import { fetchApi, handleResponse } from "./apiClient.ts";
 
 function NavTab(props: { to: string; children: ReactNode }) {
   return (
@@ -15,33 +15,35 @@ function NavTab(props: { to: string; children: ReactNode }) {
   );
 }
 
-export function AppHeader(
-  props: { className?: string; sessionId?: string; onLogOut: () => void },
-) {
+export function AppHeader(props: {
+  className?: string;
+  sessionId: string | null;
+  onLogOut: () => void;
+}) {
   const { className, sessionId, onLogOut } = props;
 
-  const session = useSWR(
+  const getSession = useSWR(
     sessionId ? ["sessions/{sessionId}", "GET", { params: { sessionId } }] as const : null,
     (args) => fetchApi(...args).then(handleResponse),
     { onError: () => onLogOut() },
   );
 
-  const user = useSWR(
-    session.data?.userId
-      ? ["users/{userId}", "GET", { params: { userId: String(session.data.userId) } }] as const
+  const getUser = useSWR(
+    getSession.data?.userId
+      ? ["users/{userId}", "GET", { params: { userId: String(getSession.data.userId) } }] as const
       : null,
     (args) => fetchApi(...args).then(handleResponse),
   );
 
-  const bot = useSWR(
+  const getBot = useSWR(
     ["bot", "GET", {}] as const,
     (args) => fetchApi(...args).then(handleResponse),
   );
 
-  const userPhoto = useSWR(
-    session.data?.userId
+  const getUserPhoto = useSWR(
+    getSession.data?.userId
       ? ["users/{userId}/photo", "GET", {
-        params: { userId: String(session.data.userId) },
+        params: { userId: String(getSession.data.userId) },
       }] as const
       : null,
     (args) => fetchApi(...args).then(handleResponse).then((blob) => URL.createObjectURL(blob)),
@@ -62,6 +64,9 @@ export function AppHeader(
         <NavTab to="/">
           Stats
         </NavTab>
+        <NavTab to="/admins">
+          Admins
+        </NavTab>
         <NavTab to="/workers">
           Workers
         </NavTab>
@@ -74,29 +79,29 @@ export function AppHeader(
       </nav>
 
       {/* loading indicator */}
-      {session.isLoading || user.isLoading ? <div className="spinner" /> : null}
+      {getSession.isLoading || getUser.isLoading ? <div className="spinner" /> : null}
 
       {/* user avatar */}
-      {user.data
-        ? userPhoto.data
+      {getUser.data
+        ? getUserPhoto.data
           ? (
             <img
-              src={userPhoto.data}
+              src={getUserPhoto.data}
               alt="avatar"
               className="w-9 h-9 rounded-full"
             />
           )
           : (
             <div className="w-9 h-9 rounded-full bg-zinc-400 dark:bg-zinc-500 flex items-center justify-center text-white text-2xl font-bold select-none">
-              {user.data.first_name.at(0)?.toUpperCase()}
+              {getUser.data.first_name.at(0)?.toUpperCase()}
             </div>
           )
         : null}
 
       {/* login/logout button */}
-      {!session.isLoading && !user.isLoading && bot.data && sessionId
+      {!getSession.isLoading && !getUser.isLoading && getBot.data && sessionId
         ? (
-          user.data
+          getUser.data
             ? (
               <button className="button-outlined" onClick={() => onLogOut()}>
                 Logout
@@ -105,7 +110,7 @@ export function AppHeader(
             : (
               <a
                 className="button-filled"
-                href={`https://t.me/${bot.data.username}?start=${sessionId}`}
+                href={`https://t.me/${getBot.data.username}?start=${sessionId}`}
                 target="_blank"
               >
                 Login

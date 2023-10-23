@@ -3,10 +3,10 @@ import FlipMove from "react-flip-move";
 import useSWR from "swr";
 import { getFlagEmoji } from "../utils/getFlagEmoji.ts";
 import { Progress } from "./Progress.tsx";
-import { fetchApi, handleResponse } from "./apiClient.tsx";
+import { fetchApi, handleResponse } from "./apiClient.ts";
 
 export function QueuePage() {
-  const jobs = useSWR(
+  const getJobs = useSWR(
     ["jobs", "GET", {}] as const,
     (args) => fetchApi(...args).then(handleResponse),
     { refreshInterval: 2000 },
@@ -19,7 +19,7 @@ export function QueuePage() {
       enterAnimation="fade"
       leaveAnimation="fade"
     >
-      {jobs.data?.map((job) => (
+      {getJobs.data?.map((job) => (
         <li
           className="flex items-baseline gap-2 bg-zinc-100 dark:bg-zinc-700 px-2 py-1 rounded-xl"
           key={job.id.join("/")}

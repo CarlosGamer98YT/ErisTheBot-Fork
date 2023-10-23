@@ -1,10 +1,10 @@
 import React from "react";
-import { fetchApi, handleResponse } from "./apiClient.tsx";
+import { fetchApi, handleResponse } from "./apiClient.ts";
 import useSWR from "swr";
 import { Counter } from "./Counter.tsx";
 
 export function StatsPage() {
-  const globalStats = useSWR(
+  const getGlobalStats = useSWR(
     ["stats", "GET", {}] as const,
     (args) => fetchApi(...args).then(handleResponse),
     { refreshInterval: 2_000 },
@@ -16,13 +16,13 @@ export function StatsPage() {
         <span>Pixelsteps diffused</span>
         <Counter
           className="font-bold text-zinc-700 dark:text-zinc-300"
-          value={globalStats.data?.pixelStepCount ?? 0}
+          value={getGlobalStats.data?.pixelStepCount ?? 0}
           digits={15}
           transitionDurationMs={3_000}
         />
         <Counter
           className="text-base"
-          value={(globalStats.data?.pixelStepsPerMinute ?? 0) / 60}
+          value={(getGlobalStats.data?.pixelStepsPerMinute ?? 0) / 60}
           digits={9}
           transitionDurationMs={2_000}
           postfix="/s"
@@ -32,13 +32,13 @@ export function StatsPage() {
         <span>Pixels painted</span>
         <Counter
           className="font-bold text-zinc-700 dark:text-zinc-300"
-          value={globalStats.data?.pixelCount ?? 0}
+          value={getGlobalStats.data?.pixelCount ?? 0}
           digits={15}
           transitionDurationMs={3_000}
         />
         <Counter
           className="text-base"
-          value={(globalStats.data?.pixelsPerMinute ?? 0) / 60}
+          value={(getGlobalStats.data?.pixelsPerMinute ?? 0) / 60}
           digits={9}
           transitionDurationMs={2_000}
           postfix="/s"
@@ -49,13 +49,13 @@ export function StatsPage() {
           <span>Steps processed</span>
           <Counter
             className="font-bold text-zinc-700 dark:text-zinc-300"
-            value={globalStats.data?.stepCount ?? 0}
+            value={getGlobalStats.data?.stepCount ?? 0}
             digits={9}
             transitionDurationMs={3_000}
           />
           <Counter
             className="text-base"
-            value={(globalStats.data?.stepsPerMinute ?? 0) / 60}
+            value={(getGlobalStats.data?.stepsPerMinute ?? 0) / 60}
             digits={3}
             fractionDigits={3}
             transitionDurationMs={2_000}
@@ -66,13 +66,13 @@ export function StatsPage() {
           <span>Images generated</span>
           <Counter
             className="font-bold text-zinc-700 dark:text-zinc-300"
-            value={globalStats.data?.imageCount ?? 0}
+            value={getGlobalStats.data?.imageCount ?? 0}
             digits={9}
             transitionDurationMs={3_000}
           />
           <Counter
             className="text-base"
-            value={(globalStats.data?.imagesPerMinute ?? 0) / 60}
+            value={(getGlobalStats.data?.imagesPerMinute ?? 0) / 60}
             digits={3}
             fractionDigits={3}
             transitionDurationMs={2_000}
@@ -84,7 +84,7 @@ export function StatsPage() {
         <span>Unique users</span>
         <Counter
           className="font-bold text-zinc-700 dark:text-zinc-300"
-          value={globalStats.data?.userCount ?? 0}
+          value={getGlobalStats.data?.userCount ?? 0}
           digits={6}
           transitionDurationMs={1_500}
         />
