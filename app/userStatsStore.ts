@@ -5,6 +5,7 @@ import { JsonSchema, jsonType } from "t_rest/server";
 import { db } from "./db.ts";
 import { generationStore } from "./generationStore.ts";
 import { kvMemoize } from "./kvMemoize.ts";
+import { sortBy } from "std/collections/sort_by.ts";
 
 export const userStatsSchema = {
   type: "object",
@@ -59,7 +60,7 @@ export const getUserStats = kvMemoize(
     let stepCount = 0;
     let pixelCount = 0;
     let pixelStepCount = 0;
-    const tagCountMap: Record<string, number> = {};
+    const tagCountMap = new Map<string, number>();
 
     info(`Calculating user stats for ${userId}`);
 
@@ -77,7 +78,7 @@ export const getUserStats = kvMemoize(
         // split on punctuation and newlines
         .split(/[,;.]\s+|\n/)
         // remove `:weight` syntax
-        .map((tag) => tag.replace(/:[\d\.]+/g, " "))
+        .map((tag) => tag.replace(/:[\d\.]+/g, ""))
         // remove `(tag)` and `[tag]` syntax
         .map((tag) => tag.replace(/[()[\]]/g, " "))
         // collapse multiple whitespace to one
@@ -92,9 +93,17 @@ export const getUserStats = kvMemoize(
         [];
 
       for (const tag of tags) {
-        tagCountMap[tag] = (tagCountMap[tag] ?? 0) + 1;
+        const count = tagCountMap.get(tag) ?? 0;
+        tagCountMap.set(tag, count + 1);
       }
     }
+
+    const tagCountObj = Object.fromEntries(
+      sortBy(
+        Array.from(tagCountMap.entries()),
+        ([_tag, count]) => -count,
+      ).filter(([_tag, count]) => count >= 3),
+    );
 
     return {
       userId,
@@ -102,7 +111,7 @@ export const getUserStats = kvMemoize(
       stepCount,
       pixelCount,
       pixelStepCount,
-      tagCountMap,
+      tagCountMap: tagCountObj,
       timestamp: Date.now(),
     };
   },
