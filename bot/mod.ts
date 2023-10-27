@@ -174,6 +174,6 @@ bot.command("crash", () => {
 });
 
 export async function runBot() {
-  const runner = run(bot);
+  const runner = run(bot, { runner: { silent: true } });
   await runner.task();
 }
