@@ -1,5 +1,11 @@
 # Eris the Bot
 
+[![Website](https://img.shields.io/website?url=https%3A%2F%2Feris.lisq.eu%2F)](https://eris.lisq.eu/)
+![Unique users](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Feris.lisq.eu%2Fapi%2Fstats&query=%24.userCount&label=unique%20users)
+![Generated images](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Feris.lisq.eu%2Fapi%2Fstats&query=%24.imageCount&label=images%20generated)
+![Processed steps](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Feris.lisq.eu%2Fapi%2Fstats&query=%24.stepCount&label=steps%20processed)
+![Painted pixels](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Feris.lisq.eu%2Fapi%2Fstats&query=%24.pixelCount&label=pixels%20painted)
+
 Telegram bot for generating images from text.
 
 ## Requirements
