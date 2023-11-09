@@ -109,12 +109,12 @@ export const adminsRoute = createPathFilter({
           },
         },
         async ({ params, query }) => {
-          const deletedAdminEntry = await adminStore.getById(params.adminId!);
-          if (!deletedAdminEntry) {
-            return { status: 404, body: { type: "text/plain", data: `Admin not found` } };
-          }
-          const deletedAdminUser = await getUser(deletedAdminEntry.value.tgUserId);
-          return withUser(query, async (chat) => {
+          return withAdmin(query, async (chat) => {
+            const deletedAdminEntry = await adminStore.getById(params.adminId!);
+            if (!deletedAdminEntry) {
+              return { status: 404, body: { type: "text/plain", data: `Admin not found` } };
+            }
+            const deletedAdminUser = await getUser(deletedAdminEntry.value.tgUserId);
             await deletedAdminEntry.delete();
             info(`User ${chat.first_name} demoted user ${deletedAdminUser.first_name} from admin`);
             return {
