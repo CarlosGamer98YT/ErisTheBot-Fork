@@ -4,7 +4,7 @@ import { JobData, Queue, Worker } from "kvmq";
 import createOpenApiClient from "openapi_fetch";
 import { delay } from "std/async/delay.ts";
 import { decode, encode } from "std/encoding/base64.ts";
-import { debug, error, info } from "std/log/mod.ts";
+import { debug, error, info, warning } from "std/log/mod.ts";
 import { ulid } from "ulid";
 import { bot } from "../bot/mod.ts";
 import { PngInfo } from "../bot/parsePngInfo.ts";
@@ -288,11 +288,17 @@ async function processGenerationJob(
     info,
   }, { retryCount: 5, retryDelayMs: 10000 });
 
+  const uploadQueueSize = await uploadQueue.getAllJobs().then((jobs) =>
+    jobs.filter((job) => job.status !== "processing").length
+  );
+
   // change status message to uploading images
   await bot.api.editMessageText(
     state.replyMessage.chat.id,
     state.replyMessage.message_id,
-    `Uploading your images...`,
+    uploadQueueSize > 10
+      ? `You are ${formatOrdinal(uploadQueueSize)} in upload queue.`
+      : `Uploading your images...`,
     { maxAttempts: 1 },
   ).catch(() => undefined);
 
@@ -310,7 +316,7 @@ export async function updateGenerationQueue() {
   while (true) {
     const jobs = await generationQueue.getAllJobs();
 
-    await Promise.all(jobs.map(async (job) => {
+    const editedMessages = await Promise.all(jobs.map(async (job) => {
       if (job.status === "processing") {
         // if the job is processing, the worker will update its status message
         return;
@@ -319,13 +325,20 @@ export async function updateGenerationQueue() {
       // spread the updates in time randomly
       await delay(Math.random() * 3_000);
 
-      await bot.api.editMessageText(
+      return await bot.api.editMessageText(
         job.state.replyMessage.chat.id,
         job.state.replyMessage.message_id,
         `You are ${formatOrdinal(job.place)} in queue.`,
         { maxAttempts: 1 },
-      ).catch(() => undefined);
+      ).then(() => true).catch(() => false);
     }));
+
+    const erroredMessages = editedMessages.filter((ok) => !ok);
+    if (erroredMessages.length > 0) {
+      warning(
+        `Updating queue status failed for ${erroredMessages.length} / ${editedMessages.length} jobs`,
+      );
+    }
 
     await delay(10_000);
   }
