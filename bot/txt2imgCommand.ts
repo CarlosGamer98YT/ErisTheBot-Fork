@@ -64,12 +64,21 @@ async function txt2img(ctx: ErisContext, match: string, includeRepliedTo: boolea
   }
 
   const repliedToText = repliedToMsg?.text || repliedToMsg?.caption;
-  if (includeRepliedTo && repliedToText) {
+  const isReply = includeRepliedTo && repliedToText;
+
+  if (isReply) {
     // TODO: remove bot command from replied to text
     params = parsePngInfo(repliedToText, params);
   }
 
   params = parsePngInfo(match, params, true);
+
+  if (isReply) {
+    const parsedInfo = parsePngInfo(repliedToText, undefined, true);
+    if (parsedInfo.prompt !== params.prompt) {
+      params.seed = parsedInfo.seed ?? -1;
+    }
+  }
 
   if (!params.prompt) {
     await ctx.reply(
