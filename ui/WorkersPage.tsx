@@ -31,14 +31,18 @@ export function WorkersPage(props: { sessionId: string | null }) {
     <>
       {getWorkers.data?.length
         ? (
-          <ul className="my-4 flex flex-col gap-2">
+          <ul className="flex flex-col gap-2">
             {getWorkers.data?.map((worker) => (
               <WorkerListItem key={worker.id} worker={worker} sessionId={sessionId} />
             ))}
           </ul>
         )
         : getWorkers.data?.length === 0
-        ? <p>No workers</p>
+        ? (
+          <li className="flex flex-col gap-2 rounded-md bg-zinc-100 dark:bg-zinc-800 p-2">
+            <p key="no-workers" className="text-center text-gray-500">No workers.</p>
+          </li>
+        )
         : getWorkers.error
         ? <p className="alert">Loading workers failed</p>
         : <div className="spinner self-center" />}

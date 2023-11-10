@@ -48,14 +48,18 @@ export function AdminsPage(props: { sessionId: string | null }) {
 
       {getAdmins.data?.length
         ? (
-          <ul className="my-4 flex flex-col gap-2">
+          <ul className="flex flex-col gap-2">
             {getAdmins.data.map((admin) => (
               <AdminListItem key={admin.id} admin={admin} sessionId={sessionId} />
             ))}
           </ul>
         )
         : getAdmins.data?.length === 0
-        ? <p>No admins</p>
+        ? (
+          <li className="flex flex-col gap-2 rounded-md bg-zinc-100 dark:bg-zinc-800 p-2">
+            <p key="no-admins" className="text-center text-gray-500">No admins.</p>
+          </li>
+        )
         : getAdmins.error
         ? <p className="alert">Loading admins failed</p>
         : <div className="spinner self-center" />}
