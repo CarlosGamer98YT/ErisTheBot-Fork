@@ -60,7 +60,7 @@ async function txt2img(ctx: ErisContext, match: string, includeRepliedTo: boolea
   if (includeRepliedTo && repliedToMsg?.document?.mime_type === "image/png") {
     const file = await ctx.api.getFile(repliedToMsg.document.file_id);
     const buffer = await fetch(file.getUrl()).then((resp) => resp.arrayBuffer());
-    params = parsePngInfo(getPngInfo(new Uint8Array(buffer)) ?? "", params);
+    params = parsePngInfo(getPngInfo(buffer) ?? "", params);
   }
 
   const repliedToText = repliedToMsg?.text || repliedToMsg?.caption;

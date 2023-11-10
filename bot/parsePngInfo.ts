@@ -1,12 +1,22 @@
-import { decode } from "png_chunk_text";
-import extractChunks from "png_chunks_extract";
+import * as ExifReader from "exifreader";
 
-export function getPngInfo(pngData: Uint8Array): string | undefined {
-  return extractChunks(pngData)
-    .filter((chunk) => chunk.name === "tEXt")
-    .map((chunk) => decode(chunk.data))
-    .find((textChunk) => textChunk.keyword === "parameters")
-    ?.text;
+export function getPngInfo(pngData: ArrayBuffer): string | undefined {
+  const image = ExifReader.load(pngData);
+
+  if (image.UserComment && image.UserComment.value) {
+    // JPEG image
+    return String.fromCharCode.apply(
+      0,
+      (image.UserComment.value as number[]).filter((char: number) => char != 0),
+    )
+      .replace("UNICODE", "");
+  } else if (image.parameters && image.parameters.description) {
+    // PNG image
+    return image.parameters.description;
+  } else {
+    // Unknown image type
+    return undefined;
+  }
 }
 
 export interface PngInfo {
