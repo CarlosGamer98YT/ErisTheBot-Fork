@@ -70,7 +70,8 @@ export async function processGenerationQueue() {
           return response;
         })
         .catch((error) => {
-          workerInstance.update({ lastError: { message: error.message, time: Date.now() } })
+          const cleanedErrorMessage = error.message.replace(/url \([^)]+\)/, "");
+          workerInstance.update({ lastError: { message: cleanedErrorMessage, time: Date.now() } })
             .catch(() => undefined);
           debug(`Worker ${workerInstance.value.key} is down: ${error}`);
         });
