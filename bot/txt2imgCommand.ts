@@ -6,6 +6,7 @@ import { generationQueue } from "../app/generationQueue.ts";
 import { formatUserChat } from "../utils/formatUserChat.ts";
 import { ErisContext } from "./mod.ts";
 import { getPngInfo, parsePngInfo, PngInfo } from "./parsePngInfo.ts";
+import { adminStore } from "../app/adminStore.ts";
 
 export const txt2imgQuestion = new StatelessQuestion<ErisContext>(
   "txt2img",
@@ -29,6 +30,7 @@ async function txt2img(ctx: ErisContext, match: string, includeRepliedTo: boolea
   }
 
   const config = await getConfig();
+  let priority = 0;
 
   if (config.pausedReason != null) {
     await ctx.reply(`I'm paused: ${config.pausedReason || "No reason given"}`, {
@@ -37,20 +39,26 @@ async function txt2img(ctx: ErisContext, match: string, includeRepliedTo: boolea
     return;
   }
 
-  const jobs = await generationQueue.getAllJobs();
-  if (jobs.length >= config.maxJobs) {
-    await ctx.reply(`The queue is full. Try again later. (Max queue size: ${config.maxJobs})`, {
-      reply_to_message_id: ctx.message?.message_id,
-    });
-    return;
-  }
+  const [admin] = await adminStore.getBy("tgUserId", { value: ctx.from.id });
 
-  const userJobs = jobs.filter((job) => job.state.from.id === ctx.message?.from?.id);
-  if (userJobs.length >= config.maxUserJobs) {
-    await ctx.reply(`You already have ${userJobs.length} jobs in queue. Try again later.`, {
-      reply_to_message_id: ctx.message?.message_id,
-    });
-    return;
+  if (admin) {
+    priority = 1;
+  } else {
+    const jobs = await generationQueue.getAllJobs();
+    if (jobs.length >= config.maxJobs) {
+      await ctx.reply(`The queue is full. Try again later. (Max queue size: ${config.maxJobs})`, {
+        reply_to_message_id: ctx.message?.message_id,
+      });
+      return;
+    }
+
+    const userJobs = jobs.filter((job) => job.state.from.id === ctx.message?.from?.id);
+    if (userJobs.length >= config.maxUserJobs) {
+      await ctx.reply(`You already have ${userJobs.length} jobs in the queue. Try again later.`, {
+        reply_to_message_id: ctx.message?.message_id,
+      });
+      return;
+    }
   }
 
   let params: Partial<PngInfo> = {};
@@ -103,7 +111,7 @@ async function txt2img(ctx: ErisContext, match: string, includeRepliedTo: boolea
     chat: ctx.message.chat,
     requestMessage: ctx.message,
     replyMessage: replyMessage,
-  }, { retryCount: 3, retryDelayMs: 10_000 });
+  }, { retryCount: 3, retryDelayMs: 10_000, priority: priority });
 
   debug(`Generation (txt2img) enqueued for ${formatUserChat(ctx.message)}`);
 }
