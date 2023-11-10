@@ -5,6 +5,7 @@ import { generationStore } from "../app/generationStore.ts";
 import { globalStats } from "../app/globalStats.ts";
 import { getUserDailyStats } from "../app/userDailyStatsStore.ts";
 import { getUserStats } from "../app/userStatsStore.ts";
+import { withAdmin } from "./withUser.ts";
 
 const STATS_INTERVAL_MIN = 3;
 
@@ -91,11 +92,31 @@ export const statsRoute = createPathFilter({
             data: {
               imageCount: stats.imageCount,
               pixelCount: stats.pixelCount,
-              tagCountMap: stats.tagCountMap,
               timestamp: stats.timestamp,
             },
           },
         };
+      },
+    ),
+  }),
+  "users/{userId}/tagcount": createMethodFilter({
+    GET: createEndpoint(
+      { query: { sessionId: { type: "string" } }, body: null },
+      async ({ params, query }) => {
+        return withAdmin(query, async () => {
+          const userId = Number(params.userId);
+          const stats = await getUserStats(userId);
+          return {
+            status: 200,
+            body: {
+              type: "application/json",
+              data: {
+                tagCountMap: stats.tagCountMap,
+                timestamp: stats.timestamp,
+              },
+            },
+          };
+        });
       },
     ),
   }),
