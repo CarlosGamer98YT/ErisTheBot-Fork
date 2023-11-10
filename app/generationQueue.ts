@@ -241,8 +241,6 @@ async function processGenerationJob(
     if (progressResponse.data.progress > state.progress) {
       state.progress = progressResponse.data.progress;
       await updateJob({ state: state });
-      await bot.api.sendChatAction(state.chat.id, "upload_photo", { maxAttempts: 1 })
-        .catch(() => undefined);
       await bot.api.editMessageText(
         state.replyMessage.chat.id,
         state.replyMessage.message_id,
@@ -297,6 +295,10 @@ async function processGenerationJob(
     `Uploading your images...`,
     { maxAttempts: 1 },
   ).catch(() => undefined);
+
+  // send upload photo action
+  await bot.api.sendChatAction(state.chat.id, "upload_photo", { maxAttempts: 1 })
+    .catch(() => undefined);
 
   debug(`Generation finished for ${formatUserChat(state)}`);
 }
