@@ -2,6 +2,8 @@ import { JsonSchema, jsonType } from "t_rest/server";
 import { kvMemoize } from "./kvMemoize.ts";
 import { db } from "./db.ts";
 import { generationStore } from "./generationStore.ts";
+import { hoursToMilliseconds, isSameDay, minutesToMilliseconds } from "date-fns";
+import { UTCDateMini } from "date-fns/utc";
 
 export const userDailyStatsSchema = {
   type: "object",
@@ -19,6 +21,36 @@ export const getUserDailyStats = kvMemoize(
   db,
   ["userDailyStats"],
   async (userId: number, year: number, month: number, day: number): Promise<UserDailyStats> => {
-    throw new Error("Not implemented");
+    let imageCount = 0;
+    let pixelCount = 0;
+
+    for await (
+      const generation of generationStore.listBy("fromId", {
+        before: new Date(new Date(year, month - 1, day).getTime() + 24 * 60 * 60 * 1000),
+        after: new Date(year, month - 1, day),
+        value: userId,
+      })
+    ) {
+      imageCount++;
+      pixelCount += (generation.value.info?.width ?? 0) * (generation.value.info?.height ?? 0);
+    }
+
+    return {
+      imageCount,
+      pixelCount,
+      timestamp: Date.now(),
+    };
+  },
+  {
+    // expire in 1 minute if was calculated on the same day, otherwise 7-14 days.
+    expireIn: (result, year, month, day) => {
+      const requestDate = new UTCDateMini(year, month - 1, day);
+      const calculatedDate = new UTCDateMini(result.timestamp);
+      return isSameDay(requestDate, calculatedDate)
+        ? minutesToMilliseconds(1)
+        : hoursToMilliseconds(24 * 7 + Math.random() * 24 * 7);
+    },
+    // should cache if the stats are non-zero
+    shouldCache: (result) => result.imageCount > 0 || result.pixelCount > 0,
   },
 );
