@@ -56,9 +56,11 @@ export function AdminsPage(props: { sessionId: string | null }) {
         )
         : getAdmins.data?.length === 0
         ? (
-          <li className="flex flex-col gap-2 rounded-md bg-zinc-100 dark:bg-zinc-800 p-2">
-            <p key="no-admins" className="text-center text-gray-500">No admins.</p>
-          </li>
+          <ul className="flex flex-col gap-2">
+            <li className="flex flex-col gap-2 rounded-md bg-zinc-100 dark:bg-zinc-800 p-2">
+              <p key="no-admins" className="text-center text-gray-500">No admins.</p>
+            </li>
+          </ul>
         )
         : getAdmins.error
         ? <p className="alert">Loading admins failed</p>

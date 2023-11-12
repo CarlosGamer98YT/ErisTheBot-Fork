@@ -1,22 +1,24 @@
 import * as ExifReader from "exifreader";
 
 export function getPngInfo(pngData: ArrayBuffer): string | undefined {
-  const image = ExifReader.load(pngData);
+  const info = ExifReader.load(pngData);
 
-  if (image.UserComment && image.UserComment.value) {
+  if (info.UserComment?.value && Array.isArray(info.UserComment.value)) {
     // JPEG image
-    return String.fromCharCode.apply(
-      0,
-      (image.UserComment.value as number[]).filter((char: number) => char != 0),
-    )
-      .replace("UNICODE", "");
-  } else if (image.parameters && image.parameters.description) {
-    // PNG image
-    return image.parameters.description;
-  } else {
-    // Unknown image type
-    return undefined;
+    return String.fromCharCode(
+      ...info.UserComment.value
+        .filter((char): char is number => typeof char == "number")
+        .filter((char) => char !== 0),
+    ).replace("UNICODE", "");
   }
+
+  if (info.parameters?.description) {
+    // PNG image
+    return info.parameters.description;
+  }
+
+  // Unknown image type
+  return undefined;
 }
 
 export interface PngInfo {

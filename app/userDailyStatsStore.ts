@@ -26,8 +26,8 @@ export const getUserDailyStats = kvMemoize(
 
     for await (
       const generation of generationStore.listBy("fromId", {
-        before: new Date(new Date(year, month - 1, day).getTime() + 24 * 60 * 60 * 1000),
-        after: new Date(year, month - 1, day),
+        after: new Date(Date.UTC(year, month - 1, day)),
+        before: new Date(Date.UTC(year, month - 1, day + 1)),
         value: userId,
       })
     ) {

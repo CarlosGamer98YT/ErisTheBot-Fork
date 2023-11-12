@@ -115,7 +115,7 @@ bot.api.setMyDescription(
 bot.api.setMyCommands([
   { command: "txt2img", description: "Generate image from text" },
   { command: "img2img", description: "Generate image from image" },
-  { command: "getprompt", description: "Try to extract prompt from raw file" },
+  { command: "pnginfo", description: "Try to extract prompt from raw file" },
   { command: "queue", description: "Show the current queue" },
   { command: "cancel", description: "Cancel all your requests" },
 ]);
@@ -160,7 +160,7 @@ bot.use(txt2imgQuestion.middleware());
 bot.command("img2img", img2imgCommand);
 bot.use(img2imgQuestion.middleware());
 
-bot.command("getprompt", pnginfoCommand);
+bot.command("pnginfo", pnginfoCommand);
 bot.use(pnginfoQuestion.middleware());
 
 bot.command("queue", queueCommand);

@@ -22,7 +22,7 @@ async function pnginfo(ctx: ErisContext, includeRepliedTo: boolean): Promise<voi
 
   if (document?.mime_type !== "image/png" && document?.mime_type !== "image/jpeg") {
     await ctx.reply(
-      "Please send me a PNG file." +
+      "Please send me a PNG or JPEG file." +
         pnginfoQuestion.messageSuffixMarkdown(),
       omitUndef(
         {
@@ -37,7 +37,14 @@ async function pnginfo(ctx: ErisContext, includeRepliedTo: boolean): Promise<voi
 
   const file = await ctx.api.getFile(document.file_id);
   const buffer = await fetch(file.getUrl()).then((resp) => resp.arrayBuffer());
-  const params = parsePngInfo(getPngInfo(buffer) ?? "Nothing found.", undefined, true);
+  const info = getPngInfo(buffer);
+  if (!info) {
+    return await ctx.reply(
+      "No info found in file.",
+      omitUndef({ reply_to_message_id: ctx.message?.message_id }),
+    );
+  }
+  const params = parsePngInfo(info, undefined, true);
 
   const paramsText = fmt([
     `${params.prompt}\n`,
