@@ -40,7 +40,9 @@ export async function getConfig(): Promise<Config> {
 export async function setConfig(newConfig: Partial<Config>): Promise<void> {
   const oldConfig = await getConfig();
   const config: Config = {
-    pausedReason: newConfig.pausedReason ?? oldConfig.pausedReason,
+    pausedReason: newConfig.pausedReason === undefined
+      ? oldConfig.pausedReason
+      : newConfig.pausedReason,
     maxUserJobs: newConfig.maxUserJobs ?? oldConfig.maxUserJobs,
     maxJobs: newConfig.maxJobs ?? oldConfig.maxJobs,
     defaultParams: newConfig.defaultParams ?? oldConfig.defaultParams,
