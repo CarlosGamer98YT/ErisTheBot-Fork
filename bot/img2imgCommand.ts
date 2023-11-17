@@ -129,7 +129,7 @@ async function img2img(
     chat: ctx.message.chat,
     requestMessage: ctx.message,
     replyMessage: replyMessage,
-  }, { retryCount: 3, repeatDelayMs: 10_000 });
+  }, { priority: 0, retryCount: 3, repeatDelayMs: 10_000 });
 
   debug(`Generation (img2img) enqueued for ${formatUserChat(ctx.message)}`);
 }
