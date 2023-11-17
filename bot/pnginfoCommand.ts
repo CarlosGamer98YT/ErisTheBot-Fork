@@ -39,7 +39,7 @@ async function pnginfo(ctx: ErisContext, includeRepliedTo: boolean): Promise<voi
   const buffer = await fetch(file.getUrl()).then((resp) => resp.arrayBuffer());
   const info = getPngInfo(buffer);
   if (!info) {
-    return await ctx.reply(
+    return void await ctx.reply(
       "No info found in file.",
       omitUndef({ reply_to_message_id: ctx.message?.message_id }),
     );
