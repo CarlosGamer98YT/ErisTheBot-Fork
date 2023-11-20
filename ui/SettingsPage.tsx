@@ -2,22 +2,23 @@ import React, { useState } from "react";
 import useSWR from "swr";
 import { cx } from "twind/core";
 import { fetchApi, handleResponse } from "./apiClient.ts";
+import { omitUndef } from "../utils/omitUndef.ts";
 
 export function SettingsPage(props: { sessionId: string | null }) {
   const { sessionId } = props;
 
   const getSession = useSWR(
-    sessionId ? ["sessions/{sessionId}", "GET", { params: { sessionId } }] as const : null,
+    sessionId ? ["/sessions/:sessionId", { params: { sessionId } }] as const : null,
     (args) => fetchApi(...args).then(handleResponse),
   );
   const getUser = useSWR(
     getSession.data?.userId
-      ? ["users/{userId}", "GET", { params: { userId: String(getSession.data.userId) } }] as const
+      ? ["/users/:userId", { params: { userId: String( getSession.data.userId) } }] as const
       : null,
     (args) => fetchApi(...args).then(handleResponse),
   );
   const getParams = useSWR(
-    ["settings/params", "GET", {}] as const,
+    ["/settings/params", {}] as const,
     (args) => fetchApi(...args).then(handleResponse),
   );
   const [newParams, setNewParams] = useState<Partial<typeof getParams.data>>({});
@@ -29,9 +30,10 @@ export function SettingsPage(props: { sessionId: string | null }) {
       onSubmit={(e) => {
         e.preventDefault();
         getParams.mutate(() =>
-          fetchApi("settings/params", "PATCH", {
+          fetchApi("/settings/params", {
+            method: "PATCH",
             query: { sessionId: sessionId ?? "" },
-            body: { type: "application/json", data: newParams ?? {} },
+            body: omitUndef(newParams ?? {}),
           }).then(handleResponse)
         )
           .then(() => setNewParams({}))

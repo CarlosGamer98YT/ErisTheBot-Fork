@@ -1,9 +1,14 @@
-import { createEndpoint, createMethodFilter } from "t_rest/server";
+import { Elysia, t } from "elysia";
 import { bot } from "../bot/mod.ts";
 
-export const botRoute = createMethodFilter({
-  GET: createEndpoint({ query: null, body: null }, async () => {
-    const username = bot.botInfo.username;
-    return { status: 200, body: { type: "application/json", data: { username } } };
-  }),
-});
+export const botRoute = new Elysia()
+  .get(
+    "",
+    async () => {
+      const username = bot.botInfo.username;
+      return { username };
+    },
+    {
+      response: t.Object({ username: t.String() }),
+    },
+  );

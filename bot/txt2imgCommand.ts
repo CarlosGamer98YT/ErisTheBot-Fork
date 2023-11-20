@@ -39,9 +39,9 @@ async function txt2img(ctx: ErisContext, match: string, includeRepliedTo: boolea
     return;
   }
 
-  const [admin] = await adminStore.getBy("tgUserId", { value: ctx.from.id });
+  const adminEntry = await adminStore.get(["admins", ctx.from.id]);
 
-  if (admin) {
+  if (adminEntry.versionstamp) {
     priority = 1;
   } else {
     const jobs = await generationQueue.getAllJobs();

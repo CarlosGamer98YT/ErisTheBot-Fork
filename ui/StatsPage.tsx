@@ -5,7 +5,7 @@ import { Counter } from "./Counter.tsx";
 
 export function StatsPage() {
   const getGlobalStats = useSWR(
-    ["stats", "GET", {}] as const,
+    ["/stats", {}] as const,
     (args) => fetchApi(...args).then(handleResponse),
     { refreshInterval: 2_000 },
   );

@@ -16,10 +16,12 @@ export function App() {
   // initialize a new session when there is no session ID
   useEffect(() => {
     if (!sessionId) {
-      fetchApi("sessions", "POST", {}).then(handleResponse).then((session) => {
-        console.log("Initialized session", session.id);
-        setSessionId(session.id);
-      });
+      fetchApi("/sessions", { method: "POST" }).then((resp) => resp).then(handleResponse).then(
+        (session) => {
+          console.log("Initialized session", session.id);
+          setSessionId(session.id);
+        },
+      );
     }
   }, [sessionId]);
 

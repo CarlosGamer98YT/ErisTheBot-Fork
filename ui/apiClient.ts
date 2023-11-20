@@ -1,15 +1,19 @@
-import { createFetcher, Output } from "t_rest/client";
-import { ApiHandler } from "../api/serveApi.ts";
+import { edenFetch } from "elysia/eden";
+import { Api } from "../api/serveApi.ts";
 
-export const fetchApi = createFetcher<ApiHandler>({
-  baseUrl: `${location.origin}/api/`,
-});
+export const API_URL = "/api";
 
-export function handleResponse<T extends Output>(
+export const fetchApi = edenFetch<Api>(API_URL);
+
+export function handleResponse<
+  T extends
+    | { data: unknown; error: null }
+    | { data: null; error: { status: number; value: unknown } },
+>(
   response: T,
-): (T & { status: 200 })["body"]["data"] {
-  if (response.status !== 200) {
-    throw new Error(String(response.body.data));
+): (T & { error: null })["data"] {
+  if (response.error) {
+    throw new Error(`${response.error?.status}: ${response.error?.value}`);
   }
-  return response.body.data;
+  return response.data;
 }

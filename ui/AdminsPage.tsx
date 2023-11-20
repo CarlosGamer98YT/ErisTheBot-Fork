@@ -11,18 +11,18 @@ export function AdminsPage(props: { sessionId: string | null }) {
   const addDialogRef = useRef<HTMLDialogElement>(null);
 
   const getSession = useSWR(
-    sessionId ? ["sessions/{sessionId}", "GET", { params: { sessionId } }] as const : null,
+    sessionId ? ["/sessions/:sessionId", { params: { sessionId } }] as const : null,
     (args) => fetchApi(...args).then(handleResponse),
   );
   const getUser = useSWR(
     getSession.data?.userId
-      ? ["users/{userId}", "GET", { params: { userId: String(getSession.data.userId) } }] as const
+      ? ["/users/:userId", { params: { userId: String(getSession.data.userId) } }] as const
       : null,
     (args) => fetchApi(...args).then(handleResponse),
   );
 
   const getAdmins = useSWR(
-    ["admins", "GET", {}] as const,
+    ["/admins", { method: "GET" }] as const,
     (args) => fetchApi(...args).then(handleResponse),
   );
 
@@ -32,14 +32,10 @@ export function AdminsPage(props: { sessionId: string | null }) {
         <button
           className="button-filled"
           onClick={() => {
-            mutate(
-              (key) => Array.isArray(key) && key[0] === "admins",
-              async () =>
-                fetchApi("admins/promote_self", "POST", {
-                  query: { sessionId: sessionId ?? "" },
-                }).then(handleResponse),
-              { populateCache: false },
-            );
+            fetchApi("/admins/promote_self", {
+              method: "POST",
+              query: { sessionId: sessionId ?? "" },
+            }).then(handleResponse).then(() => mutate(() => true));
           }}
         >
           Promote me to admin
@@ -50,7 +46,7 @@ export function AdminsPage(props: { sessionId: string | null }) {
         ? (
           <ul className="flex flex-col gap-2">
             {getAdmins.data.map((admin) => (
-              <AdminListItem key={admin.id} admin={admin} sessionId={sessionId} />
+              <AdminListItem key={admin.tgUserId} admin={admin} sessionId={sessionId} />
             ))}
           </ul>
         )
@@ -99,20 +95,13 @@ function AddAdminDialog(props: {
         onSubmit={(e) => {
           e.preventDefault();
           const data = new FormData(e.target as HTMLFormElement);
-          mutate(
-            (key) => Array.isArray(key) && key[0] === "admins",
-            async () =>
-              fetchApi("admins", "POST", {
-                query: { sessionId: sessionId! },
-                body: {
-                  type: "application/json",
-                  data: {
-                    tgUserId: Number(data.get("tgUserId") as string),
-                  },
-                },
-              }).then(handleResponse),
-            { populateCache: false },
-          );
+          fetchApi("/admins", {
+            method: "POST",
+            query: { sessionId: sessionId! },
+            body: {
+              tgUserId: Number(data.get("tgUserId") as string),
+            },
+          }).then(handleResponse).then(() => mutate(() => true));
           dialogRef.current?.close();
         }}
       >
@@ -152,17 +141,17 @@ function AdminListItem(props: { admin: AdminData; sessionId: string | null }) {
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
 
   const getAdminUser = useSWR(
-    ["users/{userId}", "GET", { params: { userId: String(admin.tgUserId) } }] as const,
+    ["/users/:userId", { params: { userId: String(admin.tgUserId) } }] as const,
     (args) => fetchApi(...args).then(handleResponse),
   );
 
   const getSession = useSWR(
-    sessionId ? ["sessions/{sessionId}", "GET", { params: { sessionId } }] as const : null,
+    sessionId ? ["/sessions/:sessionId", { params: { sessionId } }] as const : null,
     (args) => fetchApi(...args).then(handleResponse),
   );
   const getUser = useSWR(
     getSession.data?.userId
-      ? ["users/{userId}", "GET", { params: { userId: String(getSession.data.userId) } }] as const
+      ? ["/users/:userId", { params: { userId: String(getSession.data.userId) } }] as const
       : null,
     (args) => fetchApi(...args).then(handleResponse),
   );
@@ -170,7 +159,7 @@ function AdminListItem(props: { admin: AdminData; sessionId: string | null }) {
   return (
     <li className="flex flex-col gap-2 rounded-md bg-zinc-100 dark:bg-zinc-800 p-2">
       <p className="font-bold">
-        {getAdminUser.data?.first_name ?? admin.id} {getAdminUser.data?.last_name}{" "}
+        {getAdminUser.data?.first_name ?? admin.tgUserId} {getAdminUser.data?.last_name}{" "}
         {getAdminUser.data?.username
           ? (
             <a href={`https://t.me/${getAdminUser.data.username}`} className="link">
@@ -198,7 +187,7 @@ function AdminListItem(props: { admin: AdminData; sessionId: string | null }) {
       )}
       <DeleteAdminDialog
         dialogRef={deleteDialogRef}
-        adminId={admin.id}
+        adminId={admin.tgUserId}
         sessionId={sessionId}
       />
     </li>
@@ -207,7 +196,7 @@ function AdminListItem(props: { admin: AdminData; sessionId: string | null }) {
 
 function DeleteAdminDialog(props: {
   dialogRef: React.RefObject<HTMLDialogElement>;
-  adminId: string;
+  adminId: number;
   sessionId: string | null;
 }) {
   const { dialogRef, adminId, sessionId } = props;
@@ -223,15 +212,12 @@ function DeleteAdminDialog(props: {
         className="flex flex-col gap-4 p-4"
         onSubmit={(e) => {
           e.preventDefault();
-          mutate(
-            (key) => Array.isArray(key) && key[0] === "admins",
-            async () =>
-              fetchApi("admins/{adminId}", "DELETE", {
-                query: { sessionId: sessionId! },
-                params: { adminId: adminId },
-              }).then(handleResponse),
-            { populateCache: false },
-          );
+
+          fetchApi("/admins/:adminId", {
+            method: "DELETE",
+            query: { sessionId: sessionId! },
+            params: { adminId: String(adminId) },
+          }).then(handleResponse).then(() => mutate(() => true));
           dialogRef.current?.close();
         }}
       >

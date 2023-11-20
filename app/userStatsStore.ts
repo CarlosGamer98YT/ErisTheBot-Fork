@@ -1,38 +1,23 @@
 import { minutesToMilliseconds } from "date-fns";
 import { Store } from "indexed_kv";
 import { info } from "std/log/mod.ts";
-import { JsonSchema, jsonType } from "t_rest/server";
+import { Static, t } from "elysia";
 import { db } from "./db.ts";
 import { generationStore } from "./generationStore.ts";
-import { kvMemoize } from "./kvMemoize.ts";
+import { kvMemoize } from "../utils/kvMemoize.ts";
 import { sortBy } from "std/collections/sort_by.ts";
 
-export const userStatsSchema = {
-  type: "object",
-  properties: {
-    userId: { type: "number" },
-    imageCount: { type: "number" },
-    stepCount: { type: "number" },
-    pixelCount: { type: "number" },
-    pixelStepCount: { type: "number" },
-    tagCountMap: {
-      type: "object",
-      additionalProperties: { type: "number" },
-    },
-    timestamp: { type: "number" },
-  },
-  required: [
-    "userId",
-    "imageCount",
-    "stepCount",
-    "pixelCount",
-    "pixelStepCount",
-    "tagCountMap",
-    "timestamp",
-  ],
-} as const satisfies JsonSchema;
+export const userStatsSchema = t.Object({
+  userId: t.Number(),
+  imageCount: t.Number(),
+  stepCount: t.Number(),
+  pixelCount: t.Number(),
+  pixelStepCount: t.Number(),
+  tagCountMap: t.Record(t.String(), t.Number()),
+  timestamp: t.Number(),
+});
 
-export type UserStats = jsonType<typeof userStatsSchema>;
+export type UserStats = Static<typeof userStatsSchema>;
 
 type UserStatsIndices = {
   userId: number;

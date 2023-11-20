@@ -1,146 +1,134 @@
+import { Elysia, t } from "elysia";
 import { subMinutes } from "date-fns";
-import { createEndpoint, createMethodFilter, createPathFilter } from "t_rest/server";
-import { getDailyStats } from "../app/dailyStatsStore.ts";
+import { dailyStatsSchema, getDailyStats } from "../app/dailyStatsStore.ts";
 import { generationStore } from "../app/generationStore.ts";
 import { globalStats } from "../app/globalStats.ts";
-import { getUserDailyStats } from "../app/userDailyStatsStore.ts";
-import { getUserStats } from "../app/userStatsStore.ts";
-import { withAdmin } from "./withUser.ts";
+import { getUserDailyStats, userDailyStatsSchema } from "../app/userDailyStatsStore.ts";
+import { getUserStats, userStatsSchema } from "../app/userStatsStore.ts";
+import { withSessionAdmin } from "./getUser.ts";
 
 const STATS_INTERVAL_MIN = 3;
 
-export const statsRoute = createPathFilter({
-  "": createMethodFilter({
-    GET: createEndpoint(
-      { query: null, body: null },
-      async () => {
-        const after = subMinutes(new Date(), STATS_INTERVAL_MIN);
-        const generations = await generationStore.getAll({ after });
+export const statsRoute = new Elysia()
+  .get(
+    "",
+    async () => {
+      const after = subMinutes(new Date(), STATS_INTERVAL_MIN);
+      const generations = await generationStore.getAll({ after });
 
-        const imagesPerMinute = generations.length / STATS_INTERVAL_MIN;
+      const imagesPerMinute = generations.length / STATS_INTERVAL_MIN;
 
-        const stepsPerMinute = generations
-          .map((generation) => generation.value.info?.steps ?? 0)
-          .reduce((sum, steps) => sum + steps, 0) / STATS_INTERVAL_MIN;
+      const stepsPerMinute = generations
+        .map((generation) => generation.value.info?.steps ?? 0)
+        .reduce((sum, steps) => sum + steps, 0) / STATS_INTERVAL_MIN;
 
-        const pixelsPerMinute = generations
-          .map((generation) =>
-            (generation.value.info?.width ?? 0) * (generation.value.info?.height ?? 0)
-          )
-          .reduce((sum, pixels) => sum + pixels, 0) / STATS_INTERVAL_MIN;
+      const pixelsPerMinute = generations
+        .map((generation) =>
+          (generation.value.info?.width ?? 0) * (generation.value.info?.height ?? 0)
+        )
+        .reduce((sum, pixels) => sum + pixels, 0) / STATS_INTERVAL_MIN;
 
-        const pixelStepsPerMinute = generations
-          .map((generation) =>
-            (generation.value.info?.width ?? 0) * (generation.value.info?.height ?? 0) *
-            (generation.value.info?.steps ?? 0)
-          )
-          .reduce((sum, pixelSteps) => sum + pixelSteps, 0) / STATS_INTERVAL_MIN;
+      const pixelStepsPerMinute = generations
+        .map((generation) =>
+          (generation.value.info?.width ?? 0) * (generation.value.info?.height ?? 0) *
+          (generation.value.info?.steps ?? 0)
+        )
+        .reduce((sum, pixelSteps) => sum + pixelSteps, 0) / STATS_INTERVAL_MIN;
 
+      return {
+        imageCount: globalStats.imageCount,
+        stepCount: globalStats.stepCount,
+        pixelCount: globalStats.pixelCount,
+        pixelStepCount: globalStats.pixelStepCount,
+        userCount: globalStats.userIds.length,
+        imagesPerMinute,
+        stepsPerMinute,
+        pixelsPerMinute,
+        pixelStepsPerMinute,
+      };
+    },
+    {
+      response: {
+        200: t.Object({
+          imageCount: t.Number(),
+          stepCount: t.Number(),
+          pixelCount: t.Number(),
+          pixelStepCount: t.Number(),
+          userCount: t.Number(),
+          imagesPerMinute: t.Number(),
+          stepsPerMinute: t.Number(),
+          pixelsPerMinute: t.Number(),
+          pixelStepsPerMinute: t.Number(),
+        }),
+      },
+    },
+  )
+  .get(
+    "/daily/:year/:month/:day",
+    async ({ params }) => {
+      return getDailyStats(params.year, params.month, params.day);
+    },
+    {
+      params: t.Object({
+        year: t.Number(),
+        month: t.Number(),
+        day: t.Number(),
+      }),
+      response: {
+        200: dailyStatsSchema,
+      },
+    },
+  )
+  .get(
+    "/users/:userId",
+    async ({ params }) => {
+      const userId = params.userId;
+      // deno-lint-ignore no-unused-vars
+      const { tagCountMap, ...stats } = await getUserStats(userId);
+      return stats;
+    },
+    {
+      params: t.Object({ userId: t.Number() }),
+      response: {
+        200: t.Omit(userStatsSchema, ["tagCountMap"]),
+      },
+    },
+  )
+  .get(
+    "/users/:userId/tagcount",
+    async ({ params, query, set }) => {
+      return withSessionAdmin({ query, set }, async () => {
+        const stats = await getUserStats(params.userId);
         return {
-          status: 200,
-          body: {
-            type: "application/json",
-            data: {
-              imageCount: globalStats.imageCount,
-              stepCount: globalStats.stepCount,
-              pixelCount: globalStats.pixelCount,
-              pixelStepCount: globalStats.pixelStepCount,
-              userCount: globalStats.userIds.length,
-              imagesPerMinute,
-              stepsPerMinute,
-              pixelsPerMinute,
-              pixelStepsPerMinute,
-            },
-          },
+          tagCountMap: stats.tagCountMap,
+          timestamp: stats.timestamp,
         };
+      });
+    },
+    {
+      params: t.Object({ userId: t.Number() }),
+      query: t.Object({ sessionId: t.String() }),
+      response: {
+        200: t.Pick(userStatsSchema, ["tagCountMap", "timestamp"]),
+        401: t.Literal("Must be logged in"),
+        403: t.Literal("Must be an admin"),
       },
-    ),
-  }),
-  "daily/{year}/{month}/{day}": createMethodFilter({
-    GET: createEndpoint(
-      { query: null, body: null },
-      async ({ params }) => {
-        const year = Number(params.year);
-        const month = Number(params.month);
-        const day = Number(params.day);
-        const stats = await getDailyStats(year, month, day);
-        return {
-          status: 200,
-          body: {
-            type: "application/json",
-            data: {
-              imageCount: stats.imageCount,
-              pixelCount: stats.pixelCount,
-              userCount: stats.userIds.length,
-              timestamp: stats.timestamp,
-            },
-          },
-        };
+    },
+  )
+  .get(
+    "/users/:userId/daily/:year/:month/:day",
+    async ({ params }) => {
+      return getUserDailyStats(params.userId, params.year, params.month, params.day);
+    },
+    {
+      params: t.Object({
+        userId: t.Number(),
+        year: t.Number(),
+        month: t.Number(),
+        day: t.Number(),
+      }),
+      response: {
+        200: userDailyStatsSchema,
       },
-    ),
-  }),
-  "users/{userId}": createMethodFilter({
-    GET: createEndpoint(
-      { query: null, body: null },
-      async ({ params }) => {
-        const userId = Number(params.userId);
-        const stats = await getUserStats(userId);
-        return {
-          status: 200,
-          body: {
-            type: "application/json",
-            data: {
-              imageCount: stats.imageCount,
-              pixelCount: stats.pixelCount,
-              timestamp: stats.timestamp,
-            },
-          },
-        };
-      },
-    ),
-  }),
-  "users/{userId}/tagcount": createMethodFilter({
-    GET: createEndpoint(
-      { query: { sessionId: { type: "string" } }, body: null },
-      async ({ params, query }) => {
-        return withAdmin(query, async () => {
-          const userId = Number(params.userId);
-          const stats = await getUserStats(userId);
-          return {
-            status: 200,
-            body: {
-              type: "application/json",
-              data: {
-                tagCountMap: stats.tagCountMap,
-                timestamp: stats.timestamp,
-              },
-            },
-          };
-        });
-      },
-    ),
-  }),
-  "users/{userId}/daily/{year}/{month}/{day}": createMethodFilter({
-    GET: createEndpoint(
-      { query: null, body: null },
-      async ({ params }) => {
-        const userId = Number(params.userId);
-        const year = Number(params.year);
-        const month = Number(params.month);
-        const day = Number(params.day);
-        const stats = await getUserDailyStats(userId, year, month, day);
-        return {
-          status: 200,
-          body: {
-            type: "application/json",
-            data: {
-              imageCount: stats.imageCount,
-              pixelCount: stats.pixelCount,
-              timestamp: stats.timestamp,
-            },
-          },
-        };
-      },
-    ),
-  }),
-});
+    },
+  );

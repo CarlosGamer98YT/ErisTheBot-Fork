@@ -12,9 +12,9 @@ export async function broadcastCommand(ctx: CommandContext<ErisContext>) {
     return ctx.reply("I don't know who you are.");
   }
 
-  const [admin] = await adminStore.getBy("tgUserId", { value: ctx.from.id });
+  const adminEntry = await adminStore.get(["admins", ctx.from.id]);
 
-  if (!admin) {
+  if (!adminEntry.versionstamp) {
     return ctx.reply("Only a bot admin can use this command.");
   }
 

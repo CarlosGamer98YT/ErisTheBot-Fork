@@ -2,7 +2,7 @@ import React, { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import useSWR from "swr";
 import { cx } from "twind/core";
-import { fetchApi, handleResponse } from "./apiClient.ts";
+import { API_URL, fetchApi, handleResponse } from "./apiClient.ts";
 
 function NavTab(props: { to: string; children: ReactNode }) {
   return (
@@ -23,30 +23,42 @@ export function AppHeader(props: {
   const { className, sessionId, onLogOut } = props;
 
   const getSession = useSWR(
-    sessionId ? ["sessions/{sessionId}", "GET", { params: { sessionId } }] as const : null,
+    sessionId ? ["/sessions/:sessionId", { method: "GET", params: { sessionId } }] as const : null,
     (args) => fetchApi(...args).then(handleResponse),
     { onError: () => onLogOut() },
   );
 
   const getUser = useSWR(
     getSession.data?.userId
-      ? ["users/{userId}", "GET", { params: { userId: String(getSession.data.userId) } }] as const
+      ? ["/users/:userId", {
+        method: "GET",
+        params: { userId: String(getSession.data.userId) },
+      }] as const
       : null,
     (args) => fetchApi(...args).then(handleResponse),
   );
 
   const getBot = useSWR(
-    ["bot", "GET", {}] as const,
+    ["/bot", { method: "GET" }] as const,
     (args) => fetchApi(...args).then(handleResponse),
   );
 
   const getUserPhoto = useSWR(
     getSession.data?.userId
-      ? ["users/{userId}/photo", "GET", {
+      ? ["/users/:userId/photo", {
+        method: "GET",
         params: { userId: String(getSession.data.userId) },
       }] as const
       : null,
-    (args) => fetchApi(...args).then(handleResponse).then((blob) => URL.createObjectURL(blob)),
+    () =>
+      // elysia fetch can't download file
+      fetch(`${API_URL}/users/${getSession.data?.userId}/photo`)
+        .then((response) => {
+          if (!response.ok) throw new Error(response.statusText);
+          return response;
+        })
+        .then((response) => response.blob())
+        .then((blob) => blob ? URL.createObjectURL(blob) : null),
   );
 
   return (

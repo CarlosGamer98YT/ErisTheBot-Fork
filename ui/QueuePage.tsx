@@ -7,7 +7,7 @@ import { fetchApi, handleResponse } from "./apiClient.ts";
 
 export function QueuePage() {
   const getJobs = useSWR(
-    ["jobs", "GET", {}] as const,
+    ["/jobs", {}] as const,
     (args) => fetchApi(...args).then(handleResponse),
     { refreshInterval: 2000 },
   );
@@ -25,10 +25,10 @@ export function QueuePage() {
           getJobs.data?.map((job) => (
             <li
               className="flex items-baseline gap-2 bg-zinc-100 dark:bg-zinc-700 px-2 py-1 rounded-md"
-              key={job.id.join("/")}
+              key={job.id}
             >
               <span className="">{job.place}.</span>
-              <span>{getFlagEmoji(job.state.from.language_code)}</span>
+              <span>{getFlagEmoji(job.state.from.language_code ?? undefined)}</span>
               <strong>{job.state.from.first_name} {job.state.from.last_name}</strong>
               {job.state.from.username
                 ? (

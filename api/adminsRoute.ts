@@ -1,129 +1,128 @@
-import { Model } from "indexed_kv";
 import { info } from "std/log/mod.ts";
-import { createEndpoint, createMethodFilter, createPathFilter } from "t_rest/server";
+import { Elysia, Static, t } from "elysia";
 import { Admin, adminSchema, adminStore } from "../app/adminStore.ts";
-import { getUser, withAdmin, withUser } from "./withUser.ts";
+import { getUser, withSessionAdmin, withSessionUser } from "./getUser.ts";
+import { TkvEntry } from "../utils/Tkv.ts";
 
-export type AdminData = Admin & { id: string };
+const adminDataSchema = t.Intersect([adminSchema, t.Object({ tgUserId: t.Number() })]);
 
-function getAdminData(adminEntry: Model<Admin>): AdminData {
-  return { id: adminEntry.id, ...adminEntry.value };
+export type AdminData = Static<typeof adminDataSchema>;
+
+function getAdminData(adminEntry: TkvEntry<["admins", number], Admin>): AdminData {
+  return { tgUserId: adminEntry.key[1], ...adminEntry.value };
 }
 
-export const adminsRoute = createPathFilter({
-  "": createMethodFilter({
-    GET: createEndpoint(
-      {},
-      async () => {
-        const adminEntries = await adminStore.getAll();
-        const admins = adminEntries.map(getAdminData);
-        return {
-          status: 200,
-          body: { type: "application/json", data: admins satisfies AdminData[] },
-        };
+export const adminsRoute = new Elysia()
+  .get(
+    "",
+    async () => {
+      const adminEntries = await Array.fromAsync(adminStore.list({ prefix: ["admins"] }));
+      const admins = adminEntries.map(getAdminData);
+      return admins;
+    },
+    {
+      response: t.Array(adminDataSchema),
+    },
+  )
+  .post(
+    "",
+    async ({ query, body, set }) => {
+      return withSessionAdmin({ query, set }, async (sessionUser, sessionAdminEntry) => {
+        const newAdminUser = await getUser(body.tgUserId);
+        const newAdminKey = ["admins", body.tgUserId] as const;
+        const newAdminValue = { promotedBy: sessionAdminEntry.key[1] };
+        const newAdminResult = await adminStore.atomicSet(newAdminKey, null, newAdminValue);
+        if (!newAdminResult.ok) {
+          set.status = 409;
+          return "User is already an admin";
+        }
+        info(`User ${sessionUser.first_name} promoted user ${newAdminUser.first_name} to admin`);
+        return getAdminData({ ...newAdminResult, key: newAdminKey, value: newAdminValue });
+      });
+    },
+    {
+      query: t.Object({ sessionId: t.String() }),
+      body: t.Object({
+        tgUserId: t.Number(),
+      }),
+      response: {
+        200: adminDataSchema,
+        401: t.Literal("Must be logged in"),
+        403: t.Literal("Must be an admin"),
+        409: t.Literal("User is already an admin"),
       },
-    ),
-    POST: createEndpoint(
-      {
-        query: {
-          sessionId: { type: "string" },
-        },
-        body: {
-          type: "application/json",
-          schema: {
-            type: "object",
-            properties: {
-              tgUserId: adminSchema.properties.tgUserId,
-            },
-            required: ["tgUserId"],
-          },
-        },
+    },
+  )
+  .post(
+    "/promote_self",
+    // if there are no admins, allow any user to promote themselves
+    async ({ query, set }) => {
+      return withSessionUser({ query, set }, async (sessionUser) => {
+        const adminEntries = await Array.fromAsync(adminStore.list({ prefix: ["admins"] }));
+        if (adminEntries.length !== 0) {
+          set.status = 409;
+          return "You are not allowed to promote yourself";
+        }
+        const newAdminKey = ["admins", sessionUser.id] as const;
+        const newAdminValue = { promotedBy: null };
+        const newAdminResult = await adminStore.set(newAdminKey, newAdminValue);
+        info(`User ${sessionUser.first_name} promoted themselves to admin`);
+        return getAdminData({ ...newAdminResult, key: newAdminKey, value: newAdminValue });
+      });
+    },
+    {
+      query: t.Object({ sessionId: t.String() }),
+      response: {
+        200: adminDataSchema,
+        401: t.Literal("Must be logged in"),
+        403: t.Literal("Must be an admin"),
+        409: t.Literal("You are not allowed to promote yourself"),
       },
-      async ({ query, body }) => {
-        return withAdmin(query, async (user, adminEntry) => {
-          const newAdminUser = await getUser(body.data.tgUserId);
-          const newAdminEntry = await adminStore.create({
-            tgUserId: body.data.tgUserId,
-            promotedBy: adminEntry.id,
-          });
-          info(`User ${user.first_name} promoted user ${newAdminUser.first_name} to admin`);
-          return {
-            status: 200,
-            body: { type: "application/json", data: getAdminData(newAdminEntry) },
-          };
-        });
+    },
+  )
+  .get(
+    "/:adminId",
+    async ({ params, set }) => {
+      const adminEntry = await adminStore.get(["admins", Number(params.adminId)]);
+      if (!adminEntry.versionstamp) {
+        set.status = 404;
+        return "Admin not found";
+      }
+      return getAdminData(adminEntry);
+    },
+    {
+      params: t.Object({ adminId: t.String() }),
+      response: {
+        200: adminDataSchema,
+        404: t.Literal("Admin not found"),
       },
-    ),
-  }),
-
-  "promote_self": createMethodFilter({
-    POST: createEndpoint(
-      {
-        query: {
-          sessionId: { type: "string" },
-        },
+    },
+  )
+  .delete(
+    "/:adminId",
+    async ({ params, query, set }) => {
+      return withSessionAdmin({ query, set }, async (sessionUser) => {
+        const deletedAdminEntry = await adminStore.get(["admins", Number(params.adminId)]);
+        if (!deletedAdminEntry.versionstamp) {
+          set.status = 404;
+          return "Admin not found";
+        }
+        const deletedAdminUser = await getUser(deletedAdminEntry.key[1]);
+        await adminStore.delete(["admins", Number(params.adminId)]);
+        info(
+          `User ${sessionUser.first_name} demoted user ${deletedAdminUser.first_name} from admin`,
+        );
+        return null;
+      });
+    },
+    {
+      params: t.Object({ adminId: t.String() }),
+      query: t.Object({ sessionId: t.String() }),
+      response: {
+        200: t.Null(),
+        401: t.Literal("Must be logged in"),
+        403: t.Literal("Must be an admin"),
+        404: t.Literal("Admin not found"),
       },
-      // if there are no admins, allow any user to promote themselves
-      async ({ query }) => {
-        return withUser(query, async (user) => {
-          const adminEntries = await adminStore.getAll();
-          if (adminEntries.length === 0) {
-            const newAdminEntry = await adminStore.create({
-              tgUserId: user.id,
-              promotedBy: null,
-            });
-            info(`User ${user.first_name} promoted themselves to admin`);
-            return {
-              status: 200,
-              body: { type: "application/json", data: getAdminData(newAdminEntry) },
-            };
-          }
-          return {
-            status: 403,
-            body: { type: "text/plain", data: `You are not allowed to promote yourself` },
-          };
-        });
-      },
-    ),
-  }),
-
-  "{adminId}": createPathFilter({
-    "": createMethodFilter({
-      GET: createEndpoint(
-        {},
-        async ({ params }) => {
-          const adminEntry = await adminStore.getById(params.adminId!);
-          if (!adminEntry) {
-            return { status: 404, body: { type: "text/plain", data: `Admin not found` } };
-          }
-          return {
-            status: 200,
-            body: { type: "application/json", data: getAdminData(adminEntry) },
-          };
-        },
-      ),
-      DELETE: createEndpoint(
-        {
-          query: {
-            sessionId: { type: "string" },
-          },
-        },
-        async ({ params, query }) => {
-          return withAdmin(query, async (chat) => {
-            const deletedAdminEntry = await adminStore.getById(params.adminId!);
-            if (!deletedAdminEntry) {
-              return { status: 404, body: { type: "text/plain", data: `Admin not found` } };
-            }
-            const deletedAdminUser = await getUser(deletedAdminEntry.value.tgUserId);
-            await deletedAdminEntry.delete();
-            info(`User ${chat.first_name} demoted user ${deletedAdminUser.first_name} from admin`);
-            return {
-              status: 200,
-              body: { type: "application/json", data: null },
-            };
-          });
-        },
-      ),
-    }),
-  }),
-});
+    },
+  );

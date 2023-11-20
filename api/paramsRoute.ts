@@ -1,34 +1,39 @@
-import { deepMerge } from "std/collections/deep_merge.ts";
+import { Elysia, t } from "elysia";
 import { info } from "std/log/mod.ts";
-import { createEndpoint, createMethodFilter } from "t_rest/server";
-import { configSchema, getConfig, setConfig } from "../app/config.ts";
-import { withAdmin } from "./withUser.ts";
+import { defaultParamsSchema, getConfig, setConfig } from "../app/config.ts";
+import { withSessionAdmin } from "./getUser.ts";
 
-export const paramsRoute = createMethodFilter({
-  GET: createEndpoint(
-    { query: null, body: null },
+export const paramsRoute = new Elysia()
+  .get(
+    "",
     async () => {
       const config = await getConfig();
-      return { status: 200, body: { type: "application/json", data: config.defaultParams } };
+      return config.defaultParams;
     },
-  ),
-
-  PATCH: createEndpoint(
     {
-      query: { sessionId: { type: "string" } },
-      body: {
-        type: "application/json",
-        schema: configSchema.properties.defaultParams,
+      response: {
+        200: defaultParamsSchema,
       },
     },
-    async ({ query, body }) => {
-      return withAdmin(query, async (user) => {
+  )
+  .patch(
+    "",
+    async ({ query, body, set }) => {
+      return withSessionAdmin({ query, set }, async (user) => {
         const config = await getConfig();
-        info(`User ${user.first_name} updated default params: ${JSON.stringify(body.data)}`);
-        const defaultParams = deepMerge(config.defaultParams ?? {}, body.data);
+        info(`User ${user.first_name} updated default params: ${JSON.stringify(body)}`);
+        const defaultParams = { ...config.defaultParams, ...body };
         await setConfig({ defaultParams });
-        return { status: 200, body: { type: "application/json", data: config.defaultParams } };
+        return config.defaultParams;
       });
     },
-  ),
-});
+    {
+      query: t.Object({ sessionId: t.String() }),
+      body: defaultParamsSchema,
+      response: {
+        200: defaultParamsSchema,
+        401: t.Literal("Must be logged in"),
+        403: t.Literal("Must be an admin"),
+      },
+    },
+  );

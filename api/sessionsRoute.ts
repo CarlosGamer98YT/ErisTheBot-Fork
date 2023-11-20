@@ -1,4 +1,4 @@
-import { createEndpoint, createMethodFilter, createPathFilter } from "t_rest/server";
+import { Elysia, NotFoundError, t } from "elysia";
 import { ulid } from "ulid";
 
 export const sessions = new Map<string, Session>();
@@ -7,30 +7,37 @@ export interface Session {
   userId?: number | undefined;
 }
 
-export const sessionsRoute = createPathFilter({
-  "": createMethodFilter({
-    POST: createEndpoint(
-      { query: null, body: null },
-      async () => {
-        const id = ulid();
-        const session: Session = {};
-        sessions.set(id, session);
-        return { status: 200, body: { type: "application/json", data: { id, ...session } } };
-      },
-    ),
-  }),
-
-  "{sessionId}": createMethodFilter({
-    GET: createEndpoint(
-      { query: null, body: null },
-      async ({ params }) => {
-        const id = params.sessionId!;
-        const session = sessions.get(id);
-        if (!session) {
-          return { status: 401, body: { type: "text/plain", data: "Session not found" } };
-        }
-        return { status: 200, body: { type: "application/json", data: { id, ...session } } };
-      },
-    ),
-  }),
-});
+export const sessionsRoute = new Elysia()
+  .post(
+    "",
+    async () => {
+      const id = ulid();
+      const session: Session = {};
+      sessions.set(id, session);
+      return { id, userId: session.userId ?? null };
+    },
+    {
+      response: t.Object({
+        id: t.String(),
+        userId: t.Nullable(t.Number()),
+      }),
+    },
+  )
+  .get(
+    "/:sessionId",
+    async ({ params }) => {
+      const id = params.sessionId!;
+      const session = sessions.get(id);
+      if (!session) {
+        throw new NotFoundError("Session not found");
+      }
+      return { id, userId: session.userId ?? null };
+    },
+    {
+      params: t.Object({ sessionId: t.String() }),
+      response: t.Object({
+        id: t.String(),
+        userId: t.Nullable(t.Number()),
+      }),
+    },
+  );

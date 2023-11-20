@@ -1,4 +1,5 @@
-import { createLoggerMiddleware, createPathFilter } from "t_rest/server";
+import { Elysia } from "elysia";
+import { swagger } from "elysia/swagger";
 import { adminsRoute } from "./adminsRoute.ts";
 import { botRoute } from "./botRoute.ts";
 import { jobsRoute } from "./jobsRoute.ts";
@@ -8,18 +9,24 @@ import { statsRoute } from "./statsRoute.ts";
 import { usersRoute } from "./usersRoute.ts";
 import { workersRoute } from "./workersRoute.ts";
 
-export const serveApi = createLoggerMiddleware(
-  createPathFilter({
-    "admins": adminsRoute,
-    "bot": botRoute,
-    "jobs": jobsRoute,
-    "sessions": sessionsRoute,
-    "settings/params": paramsRoute,
-    "stats": statsRoute,
-    "users": usersRoute,
-    "workers": workersRoute,
-  }),
-  { filterStatus: (status) => status >= 400 },
-);
+export const api = new Elysia()
+  .use(
+    swagger({
+      path: "/docs",
+      swaggerOptions: { url: "docs/json" } as never,
+      documentation: {
+        info: { title: "Eris API", version: "0.1" },
+        servers: [{ url: "/api" }],
+      },
+    }),
+  )
+  .group("/admins", (api) => api.use(adminsRoute))
+  .group("/bot", (api) => api.use(botRoute))
+  .group("/jobs", (api) => api.use(jobsRoute))
+  .group("/sessions", (api) => api.use(sessionsRoute))
+  .group("/settings/params", (api) => api.use(paramsRoute))
+  .group("/stats", (api) => api.use(statsRoute))
+  .group("/users", (api) => api.use(usersRoute))
+  .group("/workers", (api) => api.use(workersRoute));
 
-export type ApiHandler = typeof serveApi;
+export type Api = typeof api;

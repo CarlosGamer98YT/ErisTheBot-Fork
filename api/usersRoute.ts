@@ -1,50 +1,55 @@
-import { createEndpoint, createMethodFilter, createPathFilter } from "t_rest/server";
+import { Elysia, t } from "elysia";
+import { adminSchema, adminStore } from "../app/adminStore.ts";
 import { bot } from "../bot/mod.ts";
-import { getUser } from "./withUser.ts";
-import { adminStore } from "../app/adminStore.ts";
+import { getUser } from "./getUser.ts";
 
-export const usersRoute = createPathFilter({
-  "{userId}/photo": createMethodFilter({
-    GET: createEndpoint(
-      { query: null, body: null },
-      async ({ params }) => {
-        const user = await getUser(Number(params.userId!));
-        const photoData = user.photo?.small_file_id
-          ? await fetch(
-            `https://api.telegram.org/file/bot${bot.token}/${await bot.api.getFile(
-              user.photo.small_file_id,
-            ).then((file) => file.file_path)}`,
-          ).then((resp) => resp.arrayBuffer())
-          : undefined;
-        if (!photoData) {
-          return { status: 404, body: { type: "text/plain", data: "User has no photo" } };
+export const usersRoute = new Elysia()
+  .get(
+    "/:userId/photo",
+    async ({ params }) => {
+      const user = await getUser(Number(params.userId));
+      if (!user.photo) {
+        throw new Error("User has no photo");
+      }
+      const photoFile = await bot.api.getFile(user.photo.small_file_id);
+      const photoData = await fetch(
+        `https://api.telegram.org/file/bot${bot.token}/${photoFile.file_path}`,
+      ).then((resp) => {
+        if (!resp.ok) {
+          throw new Error("Failed to fetch photo");
         }
-        return {
-          status: 200,
-          body: {
-            type: "image/jpeg",
-            data: new Blob([photoData], { type: "image/jpeg" }),
-          },
-        };
-      },
-    ),
-  }),
+        return resp;
+      }).then((resp) => resp.arrayBuffer());
 
-  "{userId}": createMethodFilter({
-    GET: createEndpoint(
-      { query: null, body: null },
-      async ({ params }) => {
-        const user = await getUser(Number(params.userId!));
-        const [adminEntry] = await adminStore.getBy("tgUserId", { value: user.id });
-        const admin = adminEntry?.value;
-        return {
-          status: 200,
-          body: {
-            type: "application/json",
-            data: { ...user, admin },
-          },
-        };
-      },
-    ),
-  }),
-});
+      return new Response(new File([photoData], "avatar.jpg", { type: "image/jpeg" }));
+    },
+    {
+      params: t.Object({ userId: t.String() }),
+    },
+  )
+  .get(
+    "/:userId",
+    async ({ params }) => {
+      const user = await getUser(Number(params.userId));
+      const adminEntry = await adminStore.get(["admins", user.id]);
+      return {
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name ?? null,
+        username: user.username ?? null,
+        bio: user.bio ?? null,
+        admin: adminEntry.value ?? null,
+      };
+    },
+    {
+      params: t.Object({ userId: t.String() }),
+      response: t.Object({
+        id: t.Number(),
+        first_name: t.String(),
+        last_name: t.Nullable(t.String()),
+        username: t.Nullable(t.String()),
+        bio: t.Nullable(t.String()),
+        admin: t.Nullable(adminSchema),
+      }),
+    },
+  );

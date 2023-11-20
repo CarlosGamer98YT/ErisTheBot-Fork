@@ -1,7 +1,7 @@
-import React, { RefObject, useRef, useState } from "react";
+import React, { RefObject, useRef } from "react";
 import { FormattedRelativeTime } from "react-intl";
 import useSWR, { useSWRConfig } from "swr";
-import { WorkerData } from "../api/workersRoute.ts";
+import { WorkerResponse } from "../api/workersRoute.ts";
 import { Counter } from "./Counter.tsx";
 import { fetchApi, handleResponse } from "./apiClient.ts";
 
@@ -11,18 +11,18 @@ export function WorkersPage(props: { sessionId: string | null }) {
   const addDialogRef = useRef<HTMLDialogElement>(null);
 
   const getSession = useSWR(
-    sessionId ? ["sessions/{sessionId}", "GET", { params: { sessionId } }] as const : null,
+    sessionId ? ["/sessions/:sessionId", { params: { sessionId } }] as const : null,
     (args) => fetchApi(...args).then(handleResponse),
   );
   const getUser = useSWR(
     getSession.data?.userId
-      ? ["users/{userId}", "GET", { params: { userId: String(getSession.data.userId) } }] as const
+      ? ["/users/:userId", { params: { userId: String(getSession.data.userId) } }] as const
       : null,
     (args) => fetchApi(...args).then(handleResponse),
   );
 
   const getWorkers = useSWR(
-    ["workers", "GET", {}] as const,
+    ["/workers", { method: "GET" }] as const,
     (args) => fetchApi(...args).then(handleResponse),
     { refreshInterval: 5000 },
   );
@@ -88,23 +88,16 @@ function AddWorkerDialog(props: {
           const user = data.get("user") as string;
           const password = data.get("password") as string;
           console.log(key, name, user, password);
-          mutate(
-            (key) => Array.isArray(key) && key[0] === "workers",
-            async () =>
-              fetchApi("workers", "POST", {
-                query: { sessionId: sessionId! },
-                body: {
-                  type: "application/json",
-                  data: {
-                    key,
-                    name: name || null,
-                    sdUrl,
-                    sdAuth: user && password ? { user, password } : null,
-                  },
-                },
-              }).then(handleResponse),
-            { populateCache: false },
-          );
+          fetchApi("/workers", {
+            method: "POST",
+            query: { sessionId: sessionId! },
+            body: {
+              key,
+              name: name || null,
+              sdUrl,
+              sdAuth: user && password ? { user, password } : null,
+            },
+          }).then(handleResponse).then(() => mutate(() => true));
           dialogRef.current?.close();
         }}
       >
@@ -190,7 +183,7 @@ function AddWorkerDialog(props: {
 }
 
 function WorkerListItem(props: {
-  worker: WorkerData;
+  worker: WorkerResponse;
   sessionId: string | null;
 }) {
   const { worker, sessionId } = props;
@@ -198,12 +191,12 @@ function WorkerListItem(props: {
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
 
   const getSession = useSWR(
-    sessionId ? ["sessions/{sessionId}", "GET", { params: { sessionId } }] as const : null,
+    sessionId ? ["/sessions/:sessionId", { params: { sessionId } }] as const : null,
     (args) => fetchApi(...args).then(handleResponse),
   );
   const getUser = useSWR(
     getSession.data?.userId
-      ? ["users/{userId}", "GET", { params: { userId: String(getSession.data.userId) } }] as const
+      ? ["/users/:userId", { params: { userId: String(getSession.data.userId) } }] as const
       : null,
     (args) => fetchApi(...args).then(handleResponse),
   );
@@ -296,21 +289,14 @@ function EditWorkerDialog(props: {
           const user = data.get("user") as string;
           const password = data.get("password") as string;
           console.log(user, password);
-          mutate(
-            (key) => Array.isArray(key) && key[0] === "workers",
-            async () =>
-              fetchApi("workers/{workerId}", "PATCH", {
-                params: { workerId: workerId },
-                query: { sessionId: sessionId! },
-                body: {
-                  type: "application/json",
-                  data: {
-                    sdAuth: user && password ? { user, password } : null,
-                  },
-                },
-              }).then(handleResponse),
-            { populateCache: false },
-          );
+          fetchApi("/workers/:workerId", {
+            method: "PATCH",
+            params: { workerId: workerId },
+            query: { sessionId: sessionId! },
+            body: {
+              sdAuth: user && password ? { user, password } : null,
+            },
+          }).then(handleResponse).then(() => mutate(() => true));
           dialogRef.current?.close();
         }}
       >
@@ -371,15 +357,11 @@ function DeleteWorkerDialog(props: {
         className="flex flex-col gap-4 p-4"
         onSubmit={(e) => {
           e.preventDefault();
-          mutate(
-            (key) => Array.isArray(key) && key[0] === "workers",
-            async () =>
-              fetchApi("workers/{workerId}", "DELETE", {
-                params: { workerId: workerId },
-                query: { sessionId: sessionId! },
-              }).then(handleResponse),
-            { populateCache: false },
-          );
+          fetchApi("/workers/:workerId", {
+            method: "DELETE",
+            params: { workerId: workerId },
+            query: { sessionId: sessionId! },
+          }).then(handleResponse).then(() => mutate(() => true));
           dialogRef.current?.close();
         }}
       >

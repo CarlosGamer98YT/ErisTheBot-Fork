@@ -1,23 +1,16 @@
 import { addDays } from "date-fns";
-import { JsonSchema, jsonType } from "t_rest/server";
 import { decodeTime } from "ulid";
 import { getDailyStats } from "./dailyStatsStore.ts";
 import { generationStore } from "./generationStore.ts";
 
-export const globalStatsSchema = {
-  type: "object",
-  properties: {
-    userIds: { type: "array", items: { type: "number" } },
-    imageCount: { type: "number" },
-    stepCount: { type: "number" },
-    pixelCount: { type: "number" },
-    pixelStepCount: { type: "number" },
-    timestamp: { type: "number" },
-  },
-  required: ["userIds", "imageCount", "stepCount", "pixelCount", "pixelStepCount", "timestamp"],
-} as const satisfies JsonSchema;
-
-export type GlobalStats = jsonType<typeof globalStatsSchema>;
+export interface GlobalStats {
+  userIds: number[];
+  imageCount: number;
+  stepCount: number;
+  pixelCount: number;
+  pixelStepCount: number;
+  timestamp: number;
+}
 
 export const globalStats: GlobalStats = await getGlobalStats();
 

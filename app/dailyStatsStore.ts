@@ -1,25 +1,21 @@
 import { hoursToMilliseconds, isSameDay, minutesToMilliseconds } from "date-fns";
 import { UTCDateMini } from "date-fns/utc";
+import { Static, t } from "elysia";
 import { info } from "std/log/mod.ts";
-import { JsonSchema, jsonType } from "t_rest/server";
 import { db } from "./db.ts";
 import { generationStore } from "./generationStore.ts";
-import { kvMemoize } from "./kvMemoize.ts";
+import { kvMemoize } from "../utils/kvMemoize.ts";
 
-export const dailyStatsSchema = {
-  type: "object",
-  properties: {
-    userIds: { type: "array", items: { type: "number" } },
-    imageCount: { type: "number" },
-    stepCount: { type: "number" },
-    pixelCount: { type: "number" },
-    pixelStepCount: { type: "number" },
-    timestamp: { type: "number" },
-  },
-  required: ["userIds", "imageCount", "stepCount", "pixelCount", "pixelStepCount", "timestamp"],
-} as const satisfies JsonSchema;
+export const dailyStatsSchema = t.Object({
+  userIds: t.Array(t.Number()),
+  imageCount: t.Number(),
+  stepCount: t.Number(),
+  pixelCount: t.Number(),
+  pixelStepCount: t.Number(),
+  timestamp: t.Number(),
+});
 
-export type DailyStats = jsonType<typeof dailyStatsSchema>;
+export type DailyStats = Static<typeof dailyStatsSchema>;
 
 export const getDailyStats = kvMemoize(
   db,
