@@ -55,9 +55,9 @@
     }
   },
   "tasks": {
-    "check": "deno check --unstable main.ts && deno check --unstable ui/main.tsx",
+    "check": "deno check --unstable-kv main.ts && deno check --unstable-kv ui/main.tsx",
     "generate": "deno run npm:openapi-typescript http://localhost:7861/openapi.json -o app/sdApi.ts",
-    "start": "deno run --unstable --allow-env --allow-read --allow-write --allow-net main.ts",
-    "test": "deno test --unstable"
+    "start": "deno run --unstable-kv --allow-env --allow-read=. --allow-write=db --allow-net main.ts",
+    "test": "deno test"
   }
 }
