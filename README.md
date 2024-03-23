@@ -1,3 +1,4 @@
+# REMEMBER THAT THIS IS A FORK, I'M NOT THE ORIGINAL OWNER
 # Eris the Bot
 
 [![Website](https://img.shields.io/website?url=https%3A%2F%2Feris.lisq.eu%2F)](https://eris.lisq.eu/)
