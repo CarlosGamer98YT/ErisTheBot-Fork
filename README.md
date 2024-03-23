@@ -6,7 +6,7 @@
 ![Generated images](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Feris.lisq.eu%2Fapi%2Fstats&query=%24.imageCount&label=images%20generated)
 ![Processed steps](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Feris.lisq.eu%2Fapi%2Fstats&query=%24.stepCount&label=steps%20processed)
 ![Painted pixels](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Feris.lisq.eu%2Fapi%2Fstats&query=%24.pixelCount&label=pixels%20painted)
-[![Original Source](https://img.shields.io/original_soirce?url=https%3A%2F%2Fgit.foxo.me%2Fpinks%2Feris%2F)](https://git.foxo.me/pinks/eris)
+[![Original Source](https://img.shields.io/website?url=https%3A%2F%2Fgit.foxo.me%2Fpinks%2Feris%2F)](https://git.foxo.me/pinks/eris)
 
 Telegram bot for generating images from text.
 
